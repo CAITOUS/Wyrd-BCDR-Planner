@@ -1,0 +1,1509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wyrd — BCDR Planner</title>
+<meta name="description" content="Plan backup schedules, retention and BCDR appliance sizing with every stakeholder at the table.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#f4f4f2; --surface-1:#fcfcfb; --surface-2:#f0efec; --border:#dddcd6; --border-strong:#c3c2b7;
+  --text-primary:#0b0b0b; --text-secondary:#52514e; --text-muted:#7a7974;
+  --accent:#1c5cab; --accent-ink:#ffffff; --accent-soft:#e3eefc;
+  --s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#6250d6;--s8:#e34948;--sother:#9b9a94;
+  --good:#1f7a3f; --good-bg:#e4f4ea; --warn:#8a5a00; --warn-bg:#fdf1d6; --crit:#b42318; --crit-bg:#fde7e5;
+  --draft:#6250d6; --draft-bg:#eeebfc;
+  --shadow:0 1px 2px rgba(0,0,0,.05),0 2px 8px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme: dark){
+  :root:where(:not([data-theme="light"])){
+    color-scheme:dark;
+    --bg:#121211; --surface-1:#1a1a19; --surface-2:#232321; --border:#33332f; --border-strong:#4a4944;
+    --text-primary:#f0efec; --text-secondary:#c3c2b7; --text-muted:#8f8e86;
+    --accent:#5598e7; --accent-ink:#0b0b0b; --accent-soft:#1c2d44;
+    --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#e66767;--sother:#6e6d67;
+    --good:#5fcf86; --good-bg:#16301f; --warn:#f0b54a; --warn-bg:#352812; --crit:#ff8a80; --crit-bg:#3a1714;
+    --draft:#a99ff0; --draft-bg:#25213f;
+    --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+    color-scheme:dark;
+    --bg:#121211; --surface-1:#1a1a19; --surface-2:#232321; --border:#33332f; --border-strong:#4a4944;
+    --text-primary:#f0efec; --text-secondary:#c3c2b7; --text-muted:#8f8e86;
+    --accent:#5598e7; --accent-ink:#0b0b0b; --accent-soft:#1c2d44;
+    --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#e66767;--sother:#6e6d67;
+    --good:#5fcf86; --good-bg:#16301f; --warn:#f0b54a; --warn-bg:#352812; --crit:#ff8a80; --crit-bg:#3a1714;
+    --draft:#a99ff0; --draft-bg:#25213f;
+    --shadow:none;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;background:var(--bg);color:var(--text-primary);font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+header.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:14px 20px;background:var(--surface-1);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20}
+header.top h1{font-size:17px;margin:0;font-weight:700;letter-spacing:-.01em}
+header.top .sub{color:var(--text-muted);font-size:12px}
+header.top .grow{flex:1}
+.client{display:flex;gap:8px;align-items:center}
+.client input{width:180px}
+nav.tabs{display:flex;gap:2px;padding:0 20px;background:var(--surface-1);border-bottom:1px solid var(--border);overflow-x:auto}
+nav.tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:10px 14px;cursor:pointer;color:var(--text-secondary);font-weight:500;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--text-primary);border-bottom-color:var(--accent)}
+main{padding:18px 20px 60px;max-width:1500px;margin:0 auto}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:16px}
+.kpi{background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:10px 12px;box-shadow:var(--shadow)}
+.kpi .l{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+.kpi .v{font-size:20px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums}
+.kpi .d{font-size:12px;color:var(--text-secondary)}
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--shadow);margin-bottom:16px}
+.card h2{font-size:15px;margin:0 0 4px}
+.card h3{font-size:13px;margin:14px 0 6px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em}
+.card .hint{color:var(--text-muted);font-size:12px;margin:0 0 12px}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.grid-ov{display:grid;grid-template-columns:340px minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:1000px){.grid-ov,.grid2{grid-template-columns:minmax(0,1fr)}}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-secondary);font-weight:500}
+label.f.inline{flex-direction:row;align-items:center;gap:8px}
+input[type=text],input[type=number],input[type=month],select,textarea{background:var(--surface-1);border:1px solid var(--border-strong);border-radius:7px;padding:6px 8px;min-height:32px}
+input[type=number]{width:100px}
+textarea{width:100%;min-height:120px;font-family:"JetBrains Mono",monospace;font-size:12px}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border-strong);background:var(--surface-1);border-radius:7px;padding:6px 12px;cursor:pointer;font-weight:500;min-height:32px;white-space:nowrap}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{border-color:transparent;background:none}
+.btn.danger{color:var(--crit)}
+.btn.sm{padding:3px 8px;min-height:26px;font-size:12px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.toggle{display:inline-flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+.toggle input{display:none}
+.toggle .sw{width:38px;height:22px;border-radius:11px;background:var(--border-strong);position:relative;transition:.15s}
+.toggle .sw::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.15s}
+.toggle input:checked + .sw{background:var(--accent)}
+.toggle input:checked + .sw::after{left:19px}
+.seg{display:inline-flex;border:1px solid var(--border-strong);border-radius:7px;overflow:hidden}
+.seg button{border:0;background:var(--surface-1);padding:5px 10px;cursor:pointer;font-size:12px;font-weight:500;color:var(--text-secondary)}
+.seg button+button{border-left:1px solid var(--border-strong)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:7px 8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);font-weight:600;background:var(--surface-2);position:sticky;top:0}
+td.num,th.num{text-align:right}
+tr.sel td{background:var(--accent-soft)}
+.tablewrap{overflow:auto;max-height:620px;border:1px solid var(--border);border-radius:8px}
+.tablewrap td input[type=text],.tablewrap td input[type=number],.tablewrap td select{min-height:28px;padding:3px 6px}
+.tablewrap td input[type=number]{width:84px}
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap}
+.pill.good{color:var(--good);background:var(--good-bg)}
+.pill.warn{color:var(--warn);background:var(--warn-bg)}
+.pill.crit{color:var(--crit);background:var(--crit-bg)}
+.pill.draft{color:var(--draft);background:var(--draft-bg)}
+.pill.neutral{color:var(--text-secondary);background:var(--surface-2)}
+.sw-dot{display:inline-block;width:10px;height:10px;border-radius:3px;flex:none}
+.bulk{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;border:1px dashed var(--accent);border-radius:8px;background:var(--accent-soft);margin-bottom:10px}
+.bulk strong{margin-right:6px}
+.muted{color:var(--text-muted)}
+.sec{color:var(--text-secondary)}
+.small{font-size:12px}
+.spacer{flex:1}
+.policies{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px}
+.pcard{border:1px solid var(--border);border-radius:12px;background:var(--surface-1);padding:14px;display:flex;flex-direction:column;gap:10px}
+.pcard.active{outline:2px solid var(--accent)}
+.pcard .hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pcard .hd .name{font-weight:700;font-size:15px}
+.pcard .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.pcard .stats div{background:var(--surface-2);border-radius:7px;padding:6px 8px}
+.pcard .stats b{display:block;font-size:14px}
+.pcard .stats span{font-size:11px;color:var(--text-muted)}
+.timeline{display:flex;height:22px;border-radius:5px;overflow:hidden;gap:2px;background:var(--surface-1)}
+.timeline div{display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff;min-width:2px;overflow:hidden;white-space:nowrap}
+.tl-legend{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--text-secondary)}
+.retention{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:var(--surface-2)}
+.retention .t{font-weight:700;margin-bottom:6px}
+.retention p{margin:6px 0}
+.retention p.ind{padding-left:22px}
+.retention select{border:0;border-bottom:1.5px solid var(--border-strong);border-radius:0;background:transparent;font-weight:700;padding:0 2px;min-height:24px}
+.warnbox{border-left:3px solid var(--warn);background:var(--warn-bg);color:var(--text-primary);padding:8px 10px;border-radius:6px;font-size:12px;margin:8px 0}
+.infobox{border-left:3px solid var(--accent);background:var(--accent-soft);padding:8px 10px;border-radius:6px;font-size:12px;margin:8px 0}
+.chartwrap{position:relative}
+.chart-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--text-secondary);margin:6px 0 4px}
+.chart-legend span{display:inline-flex;align-items:center;gap:6px}
+.tooltip{position:absolute;pointer-events:none;background:var(--surface-1);border:1px solid var(--border-strong);border-radius:8px;padding:8px 10px;font-size:12px;box-shadow:0 4px 18px rgba(0,0,0,.15);min-width:200px;display:none;z-index:5}
+.tooltip .tt-h{font-weight:700;margin-bottom:4px}
+.tooltip .tt-r{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.tooltip .tt-r span:first-child{display:inline-flex;gap:6px;align-items:center}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-start;justify-content:center;z-index:50;padding:40px 16px;overflow:auto}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface-1);border-radius:14px;max-width:980px;width:100%;padding:18px 20px;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+.modal .mh{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.modal .mh h2{margin:0;font-size:16px;flex:1}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--text-primary);color:var(--surface-1);padding:8px 14px;border-radius:8px;font-size:13px;display:none;z-index:60}
+.report-frame{border:1px solid var(--border);border-radius:8px;background:#fff;color:#111;max-height:65vh;overflow:auto}
+.empty{padding:30px;text-align:center;color:var(--text-muted)}
+.chip{display:inline-block;border:1px solid var(--border-strong);border-radius:5px;padding:0 5px;font-size:11px;color:var(--text-secondary)}
+details summary{cursor:pointer;font-weight:600;font-size:13px;margin:8px 0}
+.datefield{display:inline-flex;align-items:stretch}
+.datefield input{border-top-right-radius:0;border-bottom-right-radius:0;border-right:0}
+.datefield input::-webkit-calendar-picker-indicator{display:none}
+.calbtn{display:inline-flex;align-items:center;justify-content:center;width:38px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);border-radius:0 7px 7px 0;cursor:pointer}
+.calbtn:hover{filter:brightness(1.1)}
+.h1sub{font-weight:500;color:var(--text-secondary)}
+.updbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--accent);border-radius:10px;font-size:14px;max-width:1460px;margin:12px auto 0;background:var(--surface-1)}
+.updbar .sp,.appfoot .sp{flex:1}
+.updbar a.btnlink{background:var(--accent);color:var(--accent-ink);text-decoration:none;font-weight:500;font-size:13px;padding:7px 12px;border-radius:7px}
+.appfoot{display:grid;gap:6px;border-top:1px solid var(--border);padding:14px 20px 28px;font-size:12.5px;color:var(--text-muted);max-width:1500px;margin:0 auto}
+.appfoot .row{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+.appfoot a,.about a{color:var(--accent)}
+.about .notice{font-size:12.5px;color:var(--text-muted)}
+.dsbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid var(--border-strong);border-radius:10px;margin-bottom:14px;background:var(--surface-1)}
+.dsbar .tag{font-size:11px;font-weight:700;letter-spacing:.06em;color:#fff;background:var(--accent);padding:3px 8px;border-radius:5px}
+.dsbar.sample{border-color:var(--s2);background:repeating-linear-gradient(135deg,var(--surface-1) 0 12px,var(--surface-2) 12px 24px)}
+.dsbar.sample .tag{background:var(--s2)}
+.dsbar .sp{flex:1}
+.reco{display:flex;gap:12px;align-items:flex-start;padding:12px;border-radius:10px;background:var(--surface-2);margin-top:10px}
+.reco .ico{font-size:18px;line-height:1}
+</style>
+</head>
+<body>
+<div class="updbar" id="updBar" hidden></div>
+<header class="top">
+  <div>
+    <h1>Wyrd <span class="h1sub">BCDR Planner</span></h1>
+    <div class="sub">Plan backup schedules, retention and appliance sizing with every stakeholder at the table</div>
+  </div>
+  <div class="grow"></div>
+  <div class="client">
+    <label class="f inline">Client <input type="text" id="clientName" placeholder="Client name"></label>
+    <label class="f inline">Prepared by <input type="text" id="preparedBy" placeholder="Name / firm"></label>
+  </div>
+  <button class="btn" data-act="cpQuick" title="Save the whole configuration as a checkpoint">💾 Save checkpoint</button>
+  <button class="btn" data-act="cpOpen">Checkpoints</button>
+  <button class="btn" data-act="cpPreferred" id="btnPreferred" hidden>↺ Preferred</button>
+  <button class="btn" id="btnTheme" title="Toggle light/dark">◐ Theme</button>
+</header>
+<nav class="tabs" role="tablist" id="tabs">
+  <button role="tab" data-tab="overview" aria-selected="true">Overview &amp; forecast</button>
+  <button role="tab" data-tab="devices" aria-selected="false">Devices</button>
+  <button role="tab" data-tab="policies" aria-selected="false">Policy packages</button>
+  <button role="tab" data-tab="reports" aria-selected="false">Reports &amp; export</button>
+</nav>
+<main>
+  <div id="dsBar"></div>
+  <section class="kpis" id="kpis"></section>
+  <section id="view-overview"></section>
+  <section id="view-devices" hidden></section>
+  <section id="view-policies" hidden></section>
+  <section id="view-reports" hidden></section>
+</main>
+
+<footer class="appfoot" id="appFoot"></footer>
+<div class="modal-bg" id="modalBg"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   STATE
+   ========================================================= */
+/* =========================================================
+   WYRD — app identity, license notice, update check
+   ========================================================= */
+const WYRD = { name:'Wyrd — BCDR Planner', version:"1.0.0", released:"2026-11-03", author:'Triston Hughes', year:'2026',
+  linkedin:'https://www.linkedin.com/in/triston-hughes-949420242/', portfolio:'https://triston-hughes.vercel.app/',
+  repo:'https://github.com/CAITOUS/Wyrd-BDCR-Planner',
+  /* Raw URL of wyrd.json in the repo you publish from. Set to "" to turn update checks off. */
+  manifestUrl:"https://raw.githubusercontent.com/CAITOUS/Wyrd-BDCR-Planner/main/wyrd.json" };
+const NOTICE = `© ${WYRD.year} ${WYRD.author}. All rights reserved. Wyrd is the intellectual property of ${WYRD.author}, provided for personal, educational, and internal organizational use. Not for resale, sublicensing, or distribution by value-added resellers (VARs). Plans you create with Wyrd belong to you.`;
+const LOCAL = location.protocol === 'file:';
+const STORE_KEY = 'wyrd-v1', LEGACY_KEY = 'bcdr-planner-v1';
+const uid = () => Math.random().toString(36).slice(2,9);
+const SERIES = ['--s1','--s2','--s3','--s4','--s5','--s6','--s7','--s8'];
+const SERIES_LIGHT = ['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#008300','#6250d6','#e34948'];
+const DEVICE_TYPES = ['Server','Virtual machine','Workstation','NAS / file share','Hypervisor host'];
+
+const range=(a,b,st=1)=>{const o=[];for(let v=a;v<=b;v+=st)o.push(v);return o;};
+const RET_OPTS = {
+  retentionMonths:range(1,120),
+  intraDays:range(0,31),
+  dailyWeeks:range(0,52),
+  weeklyMonths:range(0,24),
+  intervalHours:[0.25,0.5].concat(range(1,24)),
+  windowHours:range(1,24),
+  daysPerWeek:range(1,7)
+};
+const HOURS = range(0,23).map(h=>String(h).padStart(2,'0')+':00');
+const OFFSITE_OPTS = range(1,11).map(m=>m+(m===1?' month':' months')).concat(range(1,10).map(y=>y+(y===1?' year':' years'))).concat(['Infinite','None']);
+
+function defaultPolicy(over={}){
+  return Object.assign({
+    id:uid(), name:'New policy', status:'draft', colorIdx:0,
+    description:'',
+    intervalHours:1, windowHours:24, windowStart:'00:00', daysPerWeek:7,
+    retentionMonths:3, intraDays:7, dailyWeeks:1, weeklyMonths:1, monthlyKeep:true,
+    offsiteRetention:'1 year', screenshotVerify:true, localVerify:'Weekly',
+    notes:''
+  }, over);
+}
+
+function sampleState(){
+  const p1 = defaultPolicy({name:'Standard Server', status:'published', colorIdx:0, description:'Hourly, 24x7. Mirrors vendor default: 7d intra-daily → 1w daily → 1m weekly → monthly to 3 months.'});
+  const p2 = defaultPolicy({name:'Workstation Lite', status:'published', colorIdx:1, intervalHours:4, windowHours:12, windowStart:'07:00', daysPerWeek:5, retentionMonths:1, intraDays:3, dailyWeeks:2, weeklyMonths:0, description:'Business hours only, short local retention.', offsiteRetention:'3 months'});
+  const p3 = defaultPolicy({name:'Compliance Extended', status:'draft', colorIdx:2, retentionMonths:12, intraDays:7, dailyWeeks:4, weeklyMonths:3, description:'Proposal for regulated data (long local retention).', offsiteRetention:'7 years'});
+  return {
+    v:2, dataset:'sample', client:'', preparedBy:'',
+    defaultPolicyId:p1.id,
+    global:{
+      fips:false, fipsMarkup:20, reduction:1.6,
+      capacityTB:8, targetUtil:80, horizon:24, startMonth:'2026-11', checkpointStep:6,
+      growthScope:'global', growthType:'pct', growthPct:2, growthGB:10,
+      fleetAddsPerYear:0, fleetAddSizeGB:250, fleetAddPolicyId:p1.id, wmMode:'none', chartView:'forecast',
+      changeRateMo:15, offsiteMode:'global', offsiteRetention:'1 year'
+    },
+    policies:[p1,p2,p3],
+    devices:[
+      dev('DC01','Server','HQ',120,p1.id),
+      dev('FS01','NAS / file share','HQ',1100,p1.id,{changeRate:8}),
+      dev('SQL01','Server','HQ',450,p1.id,{changeRate:30}),
+      dev('APP01','Virtual machine','HQ',220,p1.id),
+      dev('CAD-WS01','Workstation','Branch',380,p2.id),
+      dev('FIN-WS02','Workstation','HQ',190,p2.id),
+    ]
+  };
+}
+function dev(name,type,site,usedGB,policyId,extra={}){
+  return Object.assign({id:uid(),name,type,site,usedGB,policyId,changeRate:null,growthType:null,growthValue:null,override:null,notes:''},extra);
+}
+
+let S;
+try{ const raw = localStorage.getItem(STORE_KEY) || localStorage.getItem(LEGACY_KEY); S = raw ? JSON.parse(raw) : null; }catch(e){ S = null; }
+if(!S || !S.policies) S = sampleState();
+migrate();
+function migrate(){
+  delete S.models;
+  if(!S.dataset){ const names=new Set(['DC01','FS01','SQL01','APP01','CAD-WS01','FIN-WS02']); S.dataset = (S.devices.length===6 && S.devices.every(d=>names.has(d.name))) ? 'sample' : 'client'; }
+  if(!S.v || S.v<2){
+    const toMo = d => Math.round((1-Math.pow(1-Math.min(d,99)/100,30.44))*1000)/10;
+    S.devices.forEach(d=>{ if(d.changeRate!=null && d.changeRate!=='') d.changeRate = toMo(+d.changeRate); });
+    const first = S.policies[0];
+    S.global.changeRateMo = S.global.changeRateMo ?? (first && first.changeRate!=null ? toMo(first.changeRate) : 15);
+    S.global.offsiteMode = S.global.offsiteMode || 'global';
+    S.global.offsiteRetention = S.global.offsiteRetention || (first && first.offsiteRetention) || '1 year';
+    S.v = 2;
+  }
+  S.policies.forEach(p=>{ delete p.changeRate; if(!HOURS.includes(p.windowStart)) p.windowStart = HOURS[Math.min(23,parseInt(p.windowStart)||0)]; });
+}
+let UI = {tab:'overview', selected:new Set(), editPolicy:null, filter:'', sort:'name', chartBy:'policy'};
+
+function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(S)); }catch(e){} }
+
+/* =========================================================
+   HELPERS
+   ========================================================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pol = id => S.policies.find(p=>p.id===id);
+function fmtGB(gb, dp){ if(!isFinite(gb)) return '—'; if(Math.abs(gb)>=1024) return (gb/1024).toFixed(dp??2)+' TB'; return gb.toFixed(dp??0)+' GB'; }
+const fmtTB = gb => (gb/1024).toFixed(2)+' TB';
+const pct = v => (v*100).toFixed(0)+'%';
+function monthLabel(t){
+  const [y,m] = (S.global.startMonth||'2026-01').split('-').map(Number);
+  const d = new Date(y, m-1+t, 1);
+  return d.toLocaleString('en-US',{month:'short',year:'numeric'});
+}
+function fmtDays(d){ if(d>=30.4) { const m=d/30.44; return (Math.round(m*10)/10)+' mo'; } if(d>=7 && d%7===0) return (d/7)+' wk'; return d+' d'; }
+function optLabel(k,v){
+  if(k==='retentionMonths' || k==='weeklyMonths') return v===0?'0 months':(v+(v===1?' month':' months'));
+  if(k==='intraDays') return v+(v===1?' day':' days');
+  if(k==='dailyWeeks') return v+(v===1?' week':' weeks');
+  if(k==='intervalHours') return v<1? (v*60)+' minutes' : (v===1?'1 hour':v+' hours');
+  if(k==='windowHours') return v+' hrs/day';
+  if(k==='daysPerWeek') return v+' days/week';
+  return v;
+}
+function colorVar(p){ const i = S.policies.indexOf(p); return i>=0 && i<8 ? `var(${SERIES[i]})` : 'var(--sother)'; }
+function colorHex(i){ return i<8? SERIES_LIGHT[i] : '#9b9a94'; }
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.style.display='block'; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display='none',2200); }
+
+/* =========================================================
+   STORAGE MODEL
+   ---------------------------------------------------------
+   Retained recovery points by tier, each point stores the unique
+   blocks changed over its span:  unique(D) = 1-(1-c)^D
+   storage = data * (1 + Σ points_i * unique(span_i)) / reduction * FIPS
+   ========================================================= */
+const RET_KEYS = ['intervalHours','windowHours','daysPerWeek','retentionMonths','intraDays','dailyWeeks','weeklyMonths','monthlyKeep'];
+function offsiteFor(p){ return S.global.offsiteMode==='policy' ? (p.offsiteRetention||S.global.offsiteRetention) : S.global.offsiteRetention; }
+function effCfg(d){
+  const p = pol(d.policyId) || S.policies[0];
+  const c = Object.assign({}, p);
+  if(d.override) RET_KEYS.forEach(k=>{ if(d.override[k]!==undefined && d.override[k]!==null) c[k]=d.override[k]; });
+  c.changeRate = (d.changeRate!==null && d.changeRate!==undefined && d.changeRate!=='') ? +d.changeRate : S.global.changeRateMo;
+  return c;
+}
+function tierPoints(c){
+  const D = 30.44;
+  const ret = c.retentionMonths*D;
+  const dpw = (c.daysPerWeek||7)/7;
+  const perDay = Math.max(1, Math.floor((c.windowHours||24)/c.intervalHours));
+  const intraEnd = Math.min(c.intraDays, ret);
+  const dailyEnd = Math.min(c.intraDays + c.dailyWeeks*7, ret);
+  const weeklyEnd = Math.min(c.intraDays + c.dailyWeeks*7 + c.weeklyMonths*D, ret);
+  const intra = intraEnd*perDay*dpw;
+  const daily = Math.max(0, dailyEnd-intraEnd)*dpw;
+  const weekly = Math.max(0, weeklyEnd-dailyEnd)/7;
+  const monthly = c.monthlyKeep ? Math.max(0, ret-weeklyEnd)/D : 0;
+  return {intra, daily, weekly, monthly, total:intra+daily+weekly+monthly, perDay,
+          spans:{intra:intraEnd, daily:dailyEnd-intraEnd, weekly:weeklyEnd-dailyEnd, monthly:c.monthlyKeep?Math.max(0,ret-weeklyEnd):0, gap:c.monthlyKeep?0:Math.max(0,ret-weeklyEnd)},
+          overflow:(c.intraDays + c.dailyWeeks*7 + c.weeklyMonths*D) > ret+0.5};
+}
+function storageFactor(c){
+  const r = Math.min(Math.max(c.changeRate ?? S.global.changeRateMo,0),99.9)/100; // unique change per month
+  const u = D => 1-Math.pow(1-r, D/30.44);
+  const t = tierPoints(c);
+  const span = c.intervalHours/24;
+  const f = 1 + t.intra*u(span) + t.daily*u(1) + t.weekly*u(7) + t.monthly*u(30.44);
+  const g = S.global;
+  return f / Math.max(g.reduction,0.1) * (g.fips ? 1+g.fipsMarkup/100 : 1);
+}
+function growthFor(d){
+  const g = S.global;
+  if(g.growthScope==='device' && d.growthValue!==null && d.growthValue!==undefined && d.growthValue!==''){
+    return {type:d.growthType||g.growthType, value:+d.growthValue};
+  }
+  return {type:g.growthType, value: g.growthType==='pct'? g.growthPct : g.growthGB};
+}
+function dataAt(d,t){
+  const gr = growthFor(d);
+  return gr.type==='pct' ? d.usedGB*Math.pow(1+gr.value/100, t) : Math.max(0, d.usedGB + gr.value*t);
+}
+function deviceStorage(d,t=0,cfgOverride){ const c = cfgOverride || effCfg(d); return dataAt(d,t)*storageFactor(c); }
+
+function forecast(opts={}){
+  const g = S.global, H = opts.horizon ?? g.horizon;
+  const polMod = opts.polMod || (p=>p);
+  const months = [];
+  const addPol = pol(g.fleetAddPolicyId) || S.policies[0];
+  for(let t=0;t<=H;t++){
+    const byPol = {}; S.policies.forEach(p=>byPol[p.id]=0);
+    let data=0;
+    S.devices.forEach(d=>{
+      const base = effCfg(d); const p = pol(d.policyId) || S.policies[0];
+      const c = opts.polMod ? polModCfg(base, d, polMod) : base;
+      const dd = dataAt(d,t); data+=dd;
+      byPol[p.id] = (byPol[p.id]||0) + dd*storageFactor(c);
+    });
+    if(g.fleetAddsPerYear>0 && addPol){
+      const n = g.fleetAddsPerYear/12*t;
+      const c = opts.polMod ? polMod(Object.assign({},addPol)) : addPol;
+      const dd = n*g.fleetAddSizeGB; data+=dd;
+      byPol[addPol.id] += dd*storageFactor(c);
+    }
+    const total = Object.values(byPol).reduce((a,b)=>a+b,0);
+    months.push({t,byPol,total,data});
+  }
+  return months;
+}
+function polModCfg(base,d,mod){
+  // apply modification to the device's effective config (respecting override presence)
+  return mod(Object.assign({},base), d);
+}
+function summarize(fc){
+  const g = S.global, cap = g.capacityTB*1024, tgt = cap*g.targetUtil/100;
+  const now = fc[0], end = fc[fc.length-1];
+  const peak = Math.max(...fc.map(m=>m.total));
+  const hitTarget = fc.find(m=>m.total>tgt), hitFull = fc.find(m=>m.total>cap);
+  const reqTB = Math.ceil(peak/1024/(g.targetUtil/100)*2)/2;
+  const reqNowTB = Math.ceil(now.total/1024/(g.targetUtil/100)*2)/2;
+  return {cap,tgt,now,end,peak,hitTarget,hitFull,reqTB,reqNowTB,utilNow:now.total/cap,utilEnd:end.total/cap,
+          status: end.total>cap?'crit': end.total>tgt?'warn':'good'};
+}
+// largest uniform change (months) to every policy's local retention that keeps peak <= target
+function maxRetentionShift(){
+  const g=S.global, tgt=g.capacityTB*1024*g.targetUtil/100;
+  const fits = delta => {
+    const fc = forecast({polMod:(c)=>{ c.retentionMonths=Math.max(0.25,c.retentionMonths+delta); return c; }});
+    return Math.max(...fc.map(m=>m.total)) <= tgt;
+  };
+  if(fits(0)){
+    let lo=0, hi=1; while(hi<=240 && fits(hi)){ lo=hi; hi*=2; }
+    if(hi>240) return {delta:240, unlimited:true};
+    for(let i=0;i<20;i++){ const mid=(lo+hi)/2; fits(mid)?lo=mid:hi=mid; }
+    return {delta:Math.floor(lo)};
+  } else {
+    const minRet = Math.min(...S.policies.map(p=>p.retentionMonths));
+    let lo=-(minRet-0.25), hi=0;
+    if(!fits(lo)) return {delta:null, impossible:true};
+    for(let i=0;i<20;i++){ const mid=(lo+hi)/2; fits(mid)?lo=mid:hi=mid; }
+    return {delta:Math.floor(lo)};
+  }
+}
+// max retention for one policy, others unchanged
+function maxRetentionFor(p){
+  const g=S.global, tgt=g.capacityTB*1024*g.targetUtil/100;
+  const fits = rm => { const fc = forecast({polMod:(c,d)=>{ if(d? d.policyId===p.id && !(d.override&&d.override.retentionMonths!=null) : c.id===p.id) c.retentionMonths=rm; return c; }}); return Math.max(...fc.map(m=>m.total))<=tgt; };
+  if(!fits(0.25)) return null;
+  let lo=0.25, hi=1; while(hi<=600 && fits(hi)){lo=hi;hi*=2;}
+  if(hi>600) return Infinity;
+  for(let i=0;i<20;i++){const mid=(lo+hi)/2; fits(mid)?lo=mid:hi=mid;}
+  return Math.floor(lo);
+}
+
+/* =========================================================
+   RENDER: KPIs
+   ========================================================= */
+function statusPill(st){
+  return st==='good'?'<span class="pill good">✓ Fits target</span>': st==='warn'?'<span class="pill warn">▲ Above target</span>':'<span class="pill crit">✕ Over capacity</span>';
+}
+function renderKPIs(){
+  const fc = forecast(), s = summarize(fc), g=S.global;
+  const protectedNow = S.devices.reduce((a,d)=>a+d.usedGB,0);
+  $('#kpis').innerHTML = `
+    <div class="kpi"><div class="l">Devices</div><div class="v">${S.devices.length}</div><div class="d">${S.policies.length} policy packages</div></div>
+    <div class="kpi"><div class="l">Protected data (now)</div><div class="v">${fmtGB(protectedNow)}</div><div class="d">→ ${fmtGB(s.end.data)} at ${g.horizon} mo</div></div>
+    <div class="kpi"><div class="l">Backup storage (now)</div><div class="v">${fmtGB(s.now.total)}</div><div class="d">${pct(s.utilNow)} of ${g.capacityTB} TB${g.fips?' · FIPS +'+g.fipsMarkup+'%':''}</div></div>
+    <div class="kpi"><div class="l">Storage at ${g.horizon} mo</div><div class="v">${fmtGB(s.end.total)}</div><div class="d">${pct(s.utilEnd)} of capacity</div></div>
+    <div class="kpi"><div class="l">Capacity status</div><div class="v" style="font-size:15px;margin-top:6px">${statusPill(s.status)}</div><div class="d">${s.hitTarget?'Target '+g.targetUtil+'% hit '+monthLabel(s.hitTarget.t):'Under '+g.targetUtil+'% target all range'}</div></div>
+    <div class="kpi"><div class="l">Required capacity</div><div class="v">${s.reqTB} TB</div><div class="d">Usable, for peak ≤ ${g.targetUtil}% · present ${g.capacityTB} TB</div></div>`;
+}
+
+/* =========================================================
+   RENDER: OVERVIEW
+   ========================================================= */
+function renderOverview(){
+  const g = S.global;
+  const fc = forecast(), s = summarize(fc);
+  const shift = maxRetentionShift();
+  const growthVal = g.growthType==='pct'? g.growthPct : g.growthGB;
+  const steps = [];
+  for(let t=0;t<=g.horizon;t+=g.checkpointStep) steps.push(t);
+  if(steps[steps.length-1]!==g.horizon) steps.push(g.horizon);
+  const legend = S.policies.slice(0,8).map((p,i)=>`<span><i class="sw-dot" style="background:var(${SERIES[i]})"></i>${esc(p.name)}</span>`).join('') +
+     (S.policies.length>8?`<span><i class="sw-dot" style="background:var(--sother)"></i>Other</span>`:'') +
+     `<span><svg width="22" height="10"><line x1="0" y1="5" x2="22" y2="5" stroke="var(--text-primary)" stroke-width="2" stroke-dasharray="5 3"/></svg>Capacity (${g.capacityTB} TB)</span>` +
+     `<span><svg width="22" height="10"><line x1="0" y1="5" x2="22" y2="5" stroke="var(--text-secondary)" stroke-width="1.5" stroke-dasharray="1.5 3"/></svg>Target ${g.targetUtil}%</span>`;
+
+  let shiftMsg;
+  if(shift.impossible) shiftMsg = `<div class="reco"><span class="ico">✕</span><div><b>Present appliance cannot hold even minimum retention</b> for this fleet over ${g.horizon} months at ≤${g.targetUtil}%. Plan for at least <b>${s.reqTB} TB</b> usable or reduce scope.</div></div>`;
+  else if(shift.unlimited) shiftMsg = `<div class="reco"><span class="ico">✓</span><div><b>Ample headroom.</b> Retention could be extended well beyond 20 years across all policies within target. Only ${s.reqTB} TB usable is required for this plan.</div></div>`;
+  else if(shift.delta>=0) shiftMsg = `<div class="reco"><span class="ico">✓</span><div><b>Maximize present storage:</b> every policy's local retention can be extended by <b>+${shift.delta} month${shift.delta===1?'':'s'}</b> and still stay ≤ ${g.targetUtil}% through ${monthLabel(g.horizon)}.</div></div>`;
+  else shiftMsg = `<div class="reco"><span class="ico">▲</span><div><b>Over target:</b> reduce every policy's local retention by <b>${Math.abs(shift.delta)} month${shift.delta===-1?'':'s'}</b> to stay ≤ ${g.targetUtil}%, or increase usable capacity to <b>${s.reqTB} TB</b>.</div></div>`;
+
+  const capMsg = `<div class="reco"><span class="ico">▣</span><div><b>Capacity sizing:</b> peak forecast ${fmtGB(s.peak)} requires <b>${s.reqTB} TB usable</b> to stay ≤ ${g.targetUtil}% through ${monthLabel(g.horizon)} (today's load alone: ${s.reqNowTB} TB). ${s.hitFull?`<span class="pill crit">✕ Present ${g.capacityTB} TB full by ${monthLabel(s.hitFull.t)}</span>`:''}</div></div>`;
+  const wmS = wmSeries(fc);
+  $('#view-overview').innerHTML = `
+  <div class="grid-ov">
+    <div>
+      <div class="card">
+        <h2>Global settings</h2>
+        <p class="hint">Apply across every device and policy.</p>
+        <label class="toggle" style="margin-bottom:10px"><input type="checkbox" data-g="fips" ${g.fips?'checked':''}><span class="sw"></span><span><b>FIPS 140 encryption</b><br><span class="small muted">Adds a storage markup to all backup data</span></span></label>
+        <div class="row" style="margin-bottom:12px">
+          <label class="f">FIPS markup %<input type="number" min="0" step="1" data-g="fipsMarkup" value="${g.fipsMarkup}" ${g.fips?'':'disabled'}></label>
+          <label class="f">Compression / dedupe ratio<input type="number" min="0.5" step="0.1" data-g="reduction" value="${g.reduction}"></label>
+        </div>
+        <div class="row" style="margin-bottom:12px">
+          <label class="f">Default change rate (% of data / month)<input type="number" min="0" max="99" step="1" data-g="changeRateMo" value="${g.changeRateMo}"></label>
+          <span class="small muted" style="padding-bottom:8px">Override per device in Devices</span>
+        </div>
+        <h3>Offsite / cloud retention</h3>
+        <div class="row">
+          <div class="seg" role="group" aria-label="Offsite scope"><button data-act="offmode" data-v="global" aria-pressed="${g.offsiteMode==='global'}">Global policy</button><button data-act="offmode" data-v="policy" aria-pressed="${g.offsiteMode==='policy'}">Per device group</button></div>
+        </div>
+        <div class="row" style="margin:8px 0 4px">
+          <label class="f">${g.offsiteMode==='policy'?'Default (groups without their own)':'Retention for all devices'}<select data-g="offsiteRetention">${OFFSITE_OPTS.map(o=>`<option ${g.offsiteRetention===o?'selected':''}>${o}</option>`).join('')}</select></label>
+        </div>
+        ${g.offsiteMode==='policy'?'<div class="infobox">Each policy package (device group) sets its own offsite retention in <b>Policy packages</b>.</div>':''}
+        <h3>Appliance</h3>
+        <div class="row">
+          <label class="f">Present usable capacity (TB)<input type="number" min="0.1" step="0.5" data-g="capacityTB" value="${g.capacityTB}"></label>
+          <label class="f">Target max utilization %<input type="number" min="10" max="100" step="5" data-g="targetUtil" value="${g.targetUtil}"></label>
+        </div>
+        <h3>Forecast range</h3>
+        <div class="row">
+          <label class="f">Start month<span class="datefield"><input type="month" id="startMonth" data-g="startMonth" value="${g.startMonth}"><button class="calbtn" type="button" data-act="openCal" title="Pick start month" aria-label="Pick start month"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16.5" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/><path d="M7.5 13.5h2M11 13.5h2M14.5 13.5h2M7.5 17h2M11 17h2"/></svg></button></span></label>
+          <label class="f">Horizon (months)<input type="number" min="1" max="120" data-g="horizon" value="${g.horizon}"></label>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <div class="seg" role="group" aria-label="Quick horizon">${[6,12,24,36,60].map(h=>`<button data-act="horizon" data-h="${h}" aria-pressed="${g.horizon===h}">${h<12?h+'m':(h/12)+'y'}</button>`).join('')}</div>
+          <label class="f inline">Table step<select data-g="checkpointStep">${[1,3,6,12].map(v=>`<option value="${v}" ${g.checkpointStep===v?'selected':''}>${v} mo</option>`).join('')}</select></label>
+        </div>
+        <h3>Data growth over time</h3>
+        <div class="row">
+          <div class="seg" role="group" aria-label="Growth scope"><button data-act="gscope" data-v="global" aria-pressed="${g.growthScope==='global'}">Global rate</button><button data-act="gscope" data-v="device" aria-pressed="${g.growthScope==='device'}">Per device</button></div>
+          <div class="seg" role="group" aria-label="Growth unit"><button data-act="gtype" data-v="pct" aria-pressed="${g.growthType==='pct'}">% / mo</button><button data-act="gtype" data-v="abs" aria-pressed="${g.growthType==='abs'}"># GB / mo</button></div>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <label class="f">${g.growthScope==='device'?'Default rate (devices without their own)':'Rate for all devices'}<input type="number" step="0.1" data-g="${g.growthType==='pct'?'growthPct':'growthGB'}" value="${growthVal}"></label>
+          <span class="small muted" style="padding-bottom:8px">${g.growthType==='pct'?'% compounding per month':'GB added per device per month'}</span>
+        </div>
+        ${g.growthScope==='device'?'<div class="infobox">Per-device rates are set in the <b>Devices</b> tab (Growth column). Blank = default.</div>':''}
+        <h3>Fleet additions</h3>
+        <div class="row">
+          <label class="f">New devices / year<input type="number" min="0" step="1" data-g="fleetAddsPerYear" value="${g.fleetAddsPerYear}"></label>
+          <label class="f">Avg size (GB)<input type="number" min="0" step="10" data-g="fleetAddSizeGB" value="${g.fleetAddSizeGB}"></label>
+          <label class="f">Policy<select data-g="fleetAddPolicyId">${S.policies.map(p=>`<option value="${p.id}" ${g.fleetAddPolicyId===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select></label>
+        </div>
+      </div>
+    </div>
+    <div>
+      ${forecastPanel(fc,s,'ov',{footer: shiftMsg + capMsg})}
+      <div class="card">
+        <h2>Forecast table</h2>
+        <p class="hint">Table view of the chart. Change the step under Forecast range.</p>
+        <div class="tablewrap"><table>
+          <thead><tr><th>Month</th><th class="num">Protected data</th>${S.policies.map(p=>`<th class="num">${esc(p.name)}</th>`).join('')}<th class="num">Total storage</th>${wmS?'<th class="num">Δ vs watermark</th>':''}<th class="num">Utilization</th><th>Status</th></tr></thead>
+          <tbody>${steps.map(t=>{const m=fc[t]; const u=m.total/s.cap; const st=m.total>s.cap?'crit':m.total>s.tgt?'warn':'good';
+            return `<tr><td>${monthLabel(t)} <span class="muted small">(+${t})</span></td><td class="num">${fmtGB(m.data)}</td>${S.policies.map(p=>`<td class="num">${fmtGB(m.byPol[p.id]||0)}</td>`).join('')}<td class="num"><b>${fmtGB(m.total)}</b></td>${wmS?`<td class="num">${(m.total-wmS[t].total>=0?'+':'−')+fmtGB(Math.abs(m.total-wmS[t].total),1)}</td>`:''}<td class="num">${pct(u)}</td><td>${statusPill(st)}</td></tr>`}).join('')}</tbody>
+        </table></div>
+      </div>
+    </div>
+  </div>`;
+  bindChart(fc,'ov');
+}
+
+/* =========================================================
+   CHART (SVG) — forecast (stacked) or delta-from-watermark
+   ========================================================= */
+// Watermark = a baseline series. 'start' = month-0 load held flat; 'snapshot' = a captured forecast.
+function wmSeries(fc){
+  const g=S.global, mode=g.wmMode||'none';
+  if(mode==='start') return fc.map(()=>({total:fc[0].total, byPol:fc[0].byPol, data:fc[0].data}));
+  if(mode==='snapshot' && S.watermark && S.watermark.series && S.watermark.series.length){
+    const w=S.watermark.series; return fc.map((m,t)=>w[Math.min(t,w.length-1)]);
+  }
+  return null;
+}
+function wmLabel(){
+  const m=S.global.wmMode||'none';
+  if(m==='start') return 'Today’s load ('+monthLabel(0)+')';
+  if(m==='snapshot' && S.watermark) return 'Snapshot “'+S.watermark.label+'”';
+  return '';
+}
+function takeSnapshot(label){
+  const fc=forecast();
+  S.watermark={label:label||new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}), at:Date.now(), series:fc.map(m=>({total:m.total,byPol:Object.assign({},m.byPol),data:m.data}))};
+  S.global.wmMode='snapshot';
+}
+function forecastPanel(fc, s, id, opts={}){
+  const g=S.global, view=g.chartView||'forecast', wm=wmSeries(fc), mode=g.wmMode||'none';
+  const delta = view==='delta' && wm;
+  const legend = delta
+    ? `<span><i class="sw-dot" style="background:var(--s1)"></i>Increase vs watermark</span><span><i class="sw-dot" style="background:var(--s3)"></i>Decrease vs watermark</span><span><svg width="22" height="10"><line x1="0" y1="5" x2="22" y2="5" stroke="var(--text-secondary)" stroke-width="1.5" stroke-dasharray="1.5 3"/></svg>Target limit (above this line = over ${g.targetUtil}%)</span>`
+    : S.policies.slice(0,8).map((p,i)=>`<span><i class="sw-dot" style="background:var(${SERIES[i]})"></i>${esc(p.name)}</span>`).join('') +
+      (S.policies.length>8?`<span><i class="sw-dot" style="background:var(--sother)"></i>Other</span>`:'') +
+      `<span><svg width="22" height="10"><line x1="0" y1="5" x2="22" y2="5" stroke="var(--text-primary)" stroke-width="2" stroke-dasharray="5 3"/></svg>Capacity (${g.capacityTB} TB)</span>` +
+      `<span><svg width="22" height="10"><line x1="0" y1="5" x2="22" y2="5" stroke="var(--text-secondary)" stroke-width="1.5" stroke-dasharray="1.5 3"/></svg>Target ${g.targetUtil}%</span>` +
+      (wm?`<span><svg width="22" height="10"><line x1="0" y1="5" x2="22" y2="5" stroke="var(--s8)" stroke-width="2" stroke-dasharray="8 3 2 3"/></svg>Watermark</span>`:'');
+  const end=fc[fc.length-1], wEnd=wm?wm[wm.length-1].total:null;
+  const dEnd = wm? end.total-wEnd : null;
+  const dNow = wm? fc[0].total-wm[0].total : null;
+  const sign = v => (v>=0?'+':'−')+fmtGB(Math.abs(v),1);
+  return `<div class="card">
+    <div class="row" style="align-items:center;gap:10px">
+      <h2 style="flex:1;min-width:240px">${opts.title||'Backup storage forecast'} · ${monthLabel(0)} – ${monthLabel(g.horizon)}</h2>
+      ${statusPill(s.status)}
+    </div>
+    <div class="row" style="align-items:center;margin:8px 0 2px;gap:10px">
+      <div class="seg" role="group" aria-label="Chart view"><button data-act="cview" data-v="forecast" aria-pressed="${!delta}">Forecast</button><button data-act="cview" data-v="delta" aria-pressed="${!!delta}" ${wm?'':'disabled title="Set a watermark first"'}>Delta (zeroed)</button></div>
+      <label class="f inline">Watermark <select data-g="wmMode">
+        <option value="none" ${mode==='none'?'selected':''}>None</option>
+        <option value="start" ${mode==='start'?'selected':''}>Today’s load (month 0)</option>
+        <option value="snapshot" ${mode==='snapshot'?'selected':''} ${S.watermark?'':'disabled'}>Snapshot${S.watermark?' – '+esc(S.watermark.label):''}</option>
+      </select></label>
+      <button class="btn sm" data-act="wmSnap" title="Capture the current forecast as the baseline, then keep editing to see the change">⚑ Set watermark now</button>
+      ${S.watermark?`<button class="btn sm ghost" data-act="wmClear">Clear snapshot</button>`:''}
+      ${opts.compactToggle?`<span class="spacer"></span><label class="f inline">Horizon <select data-g="horizon">${[6,12,18,24,36,48,60].concat([g.horizon]).filter((v,i,a)=>a.indexOf(v)===i).sort((a,b)=>a-b).map(h=>`<option value="${h}" ${g.horizon===h?'selected':''}>${h} mo</option>`).join('')}</select></label>`:''}
+    </div>
+    <p class="hint" style="margin:6px 0 0">${delta?`Scale zeroed at the watermark (${esc(wmLabel())}): bars above 0 are added storage, below 0 is storage freed.`:(opts.hint||'Stacked local backup consumption by policy package, against present appliance capacity.')}</p>
+    ${wm?`<div class="row small" style="gap:14px;margin-top:6px"><span class="pill neutral">⚑ ${esc(wmLabel())}</span><span>Now: <b>${sign(dNow)}</b></span><span>At ${g.horizon} mo: <b>${sign(dEnd)}</b> (${pct(Math.abs(dEnd)/s.cap)} of capacity)</span></div>`:''}
+    <div class="chart-legend">${legend}</div>
+    <div class="chartwrap" id="${id}-wrap">${delta?deltaSVG(fc,wm,{id,W:opts.W||900,H:opts.H||330}):chartSVG(fc,{css:true,id,wm,W:opts.W||900,H:opts.H||330})}<div class="tooltip" id="${id}-tt"></div></div>
+    ${opts.footer||''}
+  </div>`;
+}
+function chartSVG(fc, {css=true, W=900, H=330, id='fc', wm=null}={}){
+  const g=S.global, pad={l:62,r:16,t:14,b:34};
+  const cap = g.capacityTB*1024, tgt = cap*g.targetUtil/100;
+  const maxY = Math.max(cap*1.08, ...fc.map(m=>m.total), ...(wm?wm.map(w=>w.total):[0]))*1.05;
+  const n = fc.length-1 || 1;
+  const x = t => pad.l + (W-pad.l-pad.r)*t/n;
+  const y = v => pad.t + (H-pad.t-pad.b)*(1-v/maxY);
+  const col = i => css ? (i<8?`var(${SERIES[i]})`:'var(--sother)') : colorHex(i);
+  const ink = css ? 'var(--text-primary)' : '#111';
+  const ink2 = css ? 'var(--text-secondary)' : '#555';
+  const grid = css ? 'var(--border)' : '#e2e2e2';
+  const surf = css ? 'var(--surface-1)' : '#fff';
+  const wmc = css ? 'var(--s8)' : '#e34948';
+  const step = maxY>=2048 ? niceStep(maxY/1024/5)*1024 : niceStep(maxY/5);
+  let ticks=''; for(let v=0; v<=maxY; v+=step){ ticks += `<line x1="${pad.l}" x2="${W-pad.r}" y1="${y(v)}" y2="${y(v)}" stroke="${grid}" stroke-width="1"/><text x="${pad.l-8}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="${ink2}">${fmtGB(v, v>=1024?1:0)}</text>`; }
+  const groups = S.policies.slice(0,8).map((p,i)=>({ids:[p.id],i}));
+  if(S.policies.length>8) groups.push({ids:S.policies.slice(8).map(p=>p.id),i:8});
+  let cum = fc.map(()=>0), areas='';
+  groups.forEach(gp=>{
+    const lower = cum.slice();
+    cum = fc.map((m,k)=> cum[k] + gp.ids.reduce((a,pid)=>a+(m.byPol[pid]||0),0));
+    if(cum.every((v,k)=>v-lower[k]<1e-9)) return;
+    const top = cum.map((v,k)=>`${x(k)},${y(v)}`).join(' ');
+    const bot = lower.map((v,k)=>`${x(k)},${y(v)}`).reverse().join(' ');
+    areas += `<polygon points="${top} ${bot}" fill="${col(gp.i)}" fill-opacity="0.85" stroke="${surf}" stroke-width="1.5" stroke-linejoin="round"/>`;
+  });
+  const totalLine = fc.map((m,k)=>`${x(k)},${y(m.total)}`).join(' ');
+  const wmLine = wm ? `<polyline points="${wm.map((w,k)=>`${x(k)},${y(w.total)}`).join(' ')}" fill="none" stroke="${wmc}" stroke-width="2" stroke-dasharray="8 3 2 3"/>` : '';
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Stacked forecast of backup storage by policy versus capacity" style="display:block;font-family:Inter,system-ui,sans-serif" ${css?`id="${id}-svg"`:''}>
+    ${ticks}${xTicks(n,x,H,pad,ink2)}
+    <line x1="${pad.l}" x2="${W-pad.r}" y1="${y(0)}" y2="${y(0)}" stroke="${ink2}" stroke-width="1"/>
+    ${areas}
+    <polyline points="${totalLine}" fill="none" stroke="${ink}" stroke-width="2" stroke-linejoin="round"/>
+    ${wmLine}
+    <line x1="${pad.l}" x2="${W-pad.r}" y1="${y(tgt)}" y2="${y(tgt)}" stroke="${ink2}" stroke-width="1.5" stroke-dasharray="1.5 3"/>
+    <line x1="${pad.l}" x2="${W-pad.r}" y1="${y(cap)}" y2="${y(cap)}" stroke="${ink}" stroke-width="2" stroke-dasharray="6 4"/>
+    <text x="${W-pad.r-4}" y="${y(cap)-6}" text-anchor="end" font-size="11" font-weight="600" fill="${ink}">Capacity ${g.capacityTB} TB</text>
+    <text x="${W-pad.r-4}" y="${y(tgt)-6}" text-anchor="end" font-size="11" fill="${ink2}">Target ${g.targetUtil}%</text>
+    ${css?hoverLayer(id,W,H,pad,n,ink,ink2,surf,{maxY,minY:0}):''}
+  </svg>`;
+}
+function deltaSVG(fc, wm, {W=900, H=330, id='fc'}={}){
+  const g=S.global, pad={l:70,r:16,t:14,b:34};
+  const tgt=g.capacityTB*1024*g.targetUtil/100;
+  const d = fc.map((m,k)=>m.total-wm[k].total);
+  const head = wm.map(w=>tgt-w.total); // room left before target, measured from watermark
+  const showHead = head.some(h=>h>0);
+  let lo=Math.min(0,...d), hi=Math.max(0,...d);
+  if(showHead){ const hm=Math.max(...head); if(hm < (hi-lo)*3+1) hi=Math.max(hi,hm); }
+  if(hi-lo<1){ hi+=0.5; lo-=0.5; }
+  const span=hi-lo; hi+=span*0.08; lo-= lo<0? span*0.08 : 0;
+  const n=fc.length-1||1;
+  const x=t=>pad.l+(W-pad.l-pad.r)*t/n, y=v=>pad.t+(H-pad.t-pad.b)*(1-(v-lo)/(hi-lo));
+  const big = Math.max(Math.abs(hi),Math.abs(lo));
+  const step = big>=2048? niceStep((hi-lo)/1024/5)*1024 : niceStep((hi-lo)/5);
+  let ticks=''; for(let v=Math.ceil(lo/step)*step; v<=hi; v+=step){ const lab=(v>0?'+':v<0?'−':'')+fmtGB(Math.abs(v), Math.abs(v)>=1024?1:0); ticks+=`<line x1="${pad.l}" x2="${W-pad.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--border)"/><text x="${pad.l-8}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--text-secondary)">${lab}</text>`; }
+  const pos = d.map(v=>Math.max(0,v)), neg=d.map(v=>Math.min(0,v));
+  const area=(arr,c)=>`<polygon points="${arr.map((v,k)=>`${x(k)},${y(v)}`).join(' ')} ${x(n)},${y(0)} ${x(0)},${y(0)}" fill="${c}" fill-opacity="0.35"/>`;
+  const headLine = showHead? `<polyline points="${head.map((h,k)=>`${x(k)},${y(Math.min(hi,Math.max(lo,h)))}`).join(' ')}" fill="none" stroke="var(--text-secondary)" stroke-width="1.5" stroke-dasharray="1.5 3"/>`:'';
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Change in backup storage versus watermark" style="display:block;font-family:Inter,system-ui,sans-serif" id="${id}-svg">
+    ${ticks}${xTicks(n,x,H,pad,'var(--text-secondary)')}
+    ${area(pos,'var(--s1)')}${area(neg,'var(--s3)')}
+    ${headLine}
+    <line x1="${pad.l}" x2="${W-pad.r}" y1="${y(0)}" y2="${y(0)}" stroke="var(--text-primary)" stroke-width="1.5"/>
+    <text x="${W-pad.r-4}" y="${y(0)-6}" text-anchor="end" font-size="11" font-weight="600" fill="var(--text-primary)">Watermark = 0</text>
+    <polyline points="${d.map((v,k)=>`${x(k)},${y(v)}`).join(' ')}" fill="none" stroke="var(--text-primary)" stroke-width="2" stroke-linejoin="round"/>
+    ${hoverLayer(id,W,H,pad,n,'var(--text-primary)','var(--text-secondary)','var(--surface-1)',{minY:lo,maxY:hi,delta:true})}
+  </svg>`;
+}
+function xTicks(n,x,H,pad,ink2){
+  const every=Math.max(1,Math.ceil(n/10)); let s='';
+  for(let t=0;t<=n;t+=every) s+=`<text x="${x(t)}" y="${H-pad.b+18}" text-anchor="middle" font-size="11" fill="${ink2}">${monthLabel(t).replace(' 20',' ’')}</text>`;
+  return s;
+}
+function hoverLayer(id,W,H,pad,n,ink,ink2,surf,meta){
+  return `<line id="${id}-xh" x1="0" x2="0" y1="${pad.t}" y2="${H-pad.b}" stroke="${ink2}" stroke-width="1" visibility="hidden"/><circle id="${id}-dot" r="4.5" fill="${ink}" stroke="${surf}" stroke-width="2" visibility="hidden"/>
+    <rect id="${id}-hit" x="${pad.l}" y="${pad.t}" width="${W-pad.l-pad.r}" height="${H-pad.t-pad.b}" fill="transparent" data-meta='${JSON.stringify(Object.assign({W,H,pad,n},meta))}'/>`;
+}
+function niceStep(raw){ const p=Math.pow(10,Math.floor(Math.log10(raw||1))); const f=raw/p; return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*p; }
+function bindChart(fc, id){
+  const hit = document.getElementById(id+'-hit'); if(!hit) return;
+  const meta = JSON.parse(hit.dataset.meta), svg = document.getElementById(id+'-svg'), tt = document.getElementById(id+'-tt'), wrap=document.getElementById(id+'-wrap');
+  const xh=document.getElementById(id+'-xh'), dot=document.getElementById(id+'-dot');
+  const g=S.global, cap=g.capacityTB*1024, tgt=cap*g.targetUtil/100, wm=wmSeries(fc);
+  const sign=v=>(v>=0?'+':'−')+fmtGB(Math.abs(v),1);
+  const move = e=>{
+    const r = svg.getBoundingClientRect(); const sx = (e.clientX-r.left)/r.width*meta.W;
+    const k = Math.max(0,Math.min(meta.n,Math.round((sx-meta.pad.l)/(meta.W-meta.pad.l-meta.pad.r)*meta.n)));
+    const m = fc[k], w = wm?wm[k]:null;
+    const val = meta.delta ? m.total-w.total : m.total;
+    const X = meta.pad.l+(meta.W-meta.pad.l-meta.pad.r)*k/meta.n;
+    const Y = meta.pad.t+(meta.H-meta.pad.t-meta.pad.b)*(1-(val-meta.minY)/(meta.maxY-meta.minY));
+    xh.setAttribute('x1',X); xh.setAttribute('x2',X); xh.setAttribute('visibility','visible');
+    dot.setAttribute('cx',X); dot.setAttribute('cy',Y); dot.setAttribute('visibility','visible');
+    const rows = S.policies.map((p,i)=>{ const v=m.byPol[p.id]||0, wv=w?(w.byPol[p.id]||0):0; if(!v && !wv) return '';
+      return `<div class="tt-r"><span><i class="sw-dot" style="background:${i<8?`var(${SERIES[i]})`:'var(--sother)'}"></i>${esc(p.name)}</span><b>${meta.delta?sign(v-wv):fmtGB(v,1)}</b></div>`; }).join('');
+    tt.innerHTML = `<div class="tt-h">${monthLabel(k)} <span class="muted">(+${k} mo)</span></div>${meta.delta?'<div class="muted small" style="margin-bottom:2px">Change vs watermark</div>':''}${rows}
+      <div class="tt-r" style="border-top:1px solid var(--border);margin-top:4px;padding-top:4px"><span>${meta.delta?'Total change':'Total'}</span><b>${meta.delta?sign(m.total-w.total):fmtGB(m.total,2)}</b></div>
+      ${w?`<div class="tt-r"><span>${meta.delta?'Forecast':'Δ vs watermark'}</span><b>${meta.delta?fmtGB(m.total,2):sign(m.total-w.total)}</b></div><div class="tt-r"><span>Watermark</span><b>${fmtGB(w.total,2)}</b></div>`:''}
+      <div class="tt-r"><span>Utilization</span><b>${pct(m.total/cap)}</b></div>
+      <div class="tt-r"><span>Headroom to target</span><b>${sign(tgt-m.total)}</b></div>`;
+    tt.style.display='block';
+    const px = X/meta.W*r.width, wr = wrap.getBoundingClientRect();
+    let left = px+14; if(left+tt.offsetWidth > wr.width) left = px-tt.offsetWidth-14;
+    tt.style.left = left+'px'; tt.style.top = Math.max(0,(e.clientY-wr.top)-40)+'px';
+  };
+  hit.addEventListener('mousemove', move);
+  hit.addEventListener('mouseleave', ()=>{ tt.style.display='none'; xh.setAttribute('visibility','hidden'); dot.setAttribute('visibility','hidden'); });
+}
+
+/* =========================================================
+   RENDER: DEVICES
+   ========================================================= */
+function renderDevices(){
+  const g=S.global, H=g.horizon;
+  let list = S.devices.filter(d=>{ const q=UI.filter.toLowerCase(); if(!q) return true; const p=pol(d.policyId); return [d.name,d.type,d.site,p&&p.name].join(' ').toLowerCase().includes(q); });
+  const key = UI.sort, dir = UI.sortDir||1;
+  list.sort((a,b)=>{ let va,vb; if(key==='storage'){va=deviceStorage(a);vb=deviceStorage(b);} else if(key==='policy'){va=(pol(a.policyId)||{}).name;vb=(pol(b.policyId)||{}).name;} else {va=a[key];vb=b[key];}
+    return (typeof va==='number'? va-vb : String(va).localeCompare(String(vb)))*dir; });
+  const sel = UI.selected; const nSel = [...sel].filter(id=>S.devices.some(d=>d.id===id)).length;
+  const sortH = (k,l,cls='')=>`<th class="${cls}" style="cursor:pointer" data-sort="${k}">${l}${UI.sort===k?(dir>0?' ▲':' ▼'):''}</th>`;
+  const fcD = forecast(), sD = summarize(fcD);
+  $('#view-devices').innerHTML = `
+  ${forecastPanel(fcD, sD, 'dv', {title:'Live forecast', compactToggle:true, W:1300, H:300, hint:'Updates as you edit devices below. Set a watermark, make changes, then switch to Delta to see exactly what they cost or save.'})}
+  <div class="card">
+    <div class="row" style="align-items:center">
+      <h2 style="flex:1">Devices</h2>
+      <input type="text" id="devFilter" placeholder="Filter by name, type, site, policy…" value="${esc(UI.filter)}" style="width:260px">
+      <button class="btn" data-act="addDevice">+ Add device</button>
+      <button class="btn" data-act="importCSV">⇪ Import CSV</button>
+      <button class="btn ghost danger" data-act="clearDevices">Clear all</button>
+    </div>
+    <p class="hint">Edit inline. Select rows for mass editing. Blank change %/mo or growth = use the global default. “Customize” sets per-device retention that overrides its policy.</p>
+    ${nSel?`<div class="bulk"><strong>${nSel} selected</strong>
+      <label class="f inline">Policy <select id="bkPolicy"><option value="">—</option>${S.policies.map(p=>`<option value="${p.id}">${esc(p.name)}${p.status==='draft'?' (draft)':''}</option>`).join('')}</select></label>
+      <button class="btn sm" data-act="bkApplyPolicy">Assign</button>
+      <label class="f inline">Type <select id="bkType"><option value="">—</option>${DEVICE_TYPES.map(t=>`<option>${t}</option>`).join('')}</select></label>
+      <button class="btn sm" data-act="bkApplyType">Set</button>
+      <label class="f inline">Site <input type="text" id="bkSite" style="width:100px"></label>
+      <button class="btn sm" data-act="bkApplySite">Set</button>
+      <label class="f inline">Change %/mo <input type="number" step="1" id="bkChange" style="width:70px"></label>
+      <button class="btn sm" data-act="bkApplyChange">Set</button>
+      ${g.growthScope==='device'?`<label class="f inline">Growth (${g.growthType==='pct'?'%/mo':'GB/mo'}) <input type="number" step="0.1" id="bkGrowth" style="width:70px"></label><button class="btn sm" data-act="bkApplyGrowth">Set</button>`:''}
+      <button class="btn sm" data-act="bkCustomize">Customize retention…</button>
+      <button class="btn sm" data-act="bkClearOverride">Revert to policy</button>
+      <button class="btn sm danger" data-act="bkDelete">Delete</button>
+      <span class="spacer"></span><button class="btn sm ghost" data-act="bkNone">Clear selection</button>
+    </div>`:''}
+    ${S.devices.length===0?`<div class="empty">No devices yet. Add one, import an RMM/CSV export, or <button class="btn sm" data-act="loadSample">load sample data</button>.</div>`:`
+    <div class="tablewrap"><table>
+      <thead><tr><th style="width:28px"><input type="checkbox" id="selAll" ${nSel && nSel===list.length?'checked':''} aria-label="Select all"></th>
+      ${sortH('name','Device')}${sortH('type','Type')}${sortH('site','Site')}${sortH('usedGB','Used data (GB)','num')}${sortH('policy','Policy')}
+      <th class="num" title="% of the device's data that changes per month">Change %/mo</th>${g.growthScope==='device'?`<th class="num">Growth ${g.growthType==='pct'?'%/mo':'GB/mo'}</th>`:''}<th>Retention</th>${sortH('storage','Storage now','num')}<th class="num">At ${H} mo</th><th></th></tr></thead>
+      <tbody>${list.map(d=>{ const c=effCfg(d), p=pol(d.policyId), tp=tierPoints(c);
+        return `<tr class="${sel.has(d.id)?'sel':''}" data-id="${d.id}">
+        <td><input type="checkbox" data-selrow ${sel.has(d.id)?'checked':''} aria-label="Select ${esc(d.name)}"></td>
+        <td><input type="text" data-f="name" value="${esc(d.name)}" style="width:130px"></td>
+        <td><select data-f="type">${DEVICE_TYPES.map(t=>`<option ${d.type===t?'selected':''}>${t}</option>`).join('')}</select></td>
+        <td><input type="text" data-f="site" value="${esc(d.site)}" style="width:90px"></td>
+        <td class="num"><input type="number" min="0" step="10" data-f="usedGB" value="${d.usedGB}"></td>
+        <td><div style="display:flex;align-items:center;gap:6px"><i class="sw-dot" style="background:${p?colorVar(p):'var(--sother)'}"></i><select data-f="policyId">${S.policies.map(pp=>`<option value="${pp.id}" ${d.policyId===pp.id?'selected':''}>${esc(pp.name)}${pp.status==='draft'?' (draft)':''}</option>`).join('')}</select></div></td>
+        <td class="num"><input type="number" step="0.1" min="0" data-f="changeRate" value="${d.changeRate??''}" placeholder="${g.changeRateMo}"></td>
+        ${g.growthScope==='device'?`<td class="num"><input type="number" step="0.1" data-f="growthValue" value="${d.growthValue??''}" placeholder="${g.growthType==='pct'?g.growthPct:g.growthGB}"></td>`:''}
+        <td class="small">${d.override?'<span class="pill draft">Custom</span> ':''}${c.retentionMonths} mo · ${optLabel('intervalHours',c.intervalHours)} <span class="muted">(${Math.round(tp.total)} pts)</span></td>
+        <td class="num">${fmtGB(deviceStorage(d,0),1)}</td>
+        <td class="num">${fmtGB(deviceStorage(d,H),1)}</td>
+        <td><button class="btn sm" data-act="customize" data-id="${d.id}">Customize</button></td></tr>`}).join('')}</tbody>
+    </table></div>`}
+  </div>`;
+  bindChart(fcD,'dv');
+}
+
+/* =========================================================
+   RETENTION EDITOR (sentence form, like vendor UI)
+   ========================================================= */
+function selHTML(k, v, attr){
+  let opts = RET_OPTS[k].slice(); if(!opts.includes(v)) { opts.push(v); opts.sort((a,b)=>a-b); }
+  return `<select ${attr}="${k}" aria-label="${k}">${opts.map(o=>`<option value="${o}" ${o===v?'selected':''}>${optLabel(k,o)}</option>`).join('')}</select>`;
+}
+function retentionEditor(c, attr='data-rk'){
+  const tp = tierPoints(c);
+  return `<div class="retention">
+    <div class="t">Backup schedule</div>
+    <p>Take a backup every ${selHTML('intervalHours',c.intervalHours,attr)} during a ${selHTML('windowHours',c.windowHours,attr)} window, ${selHTML('daysPerWeek',c.daysPerWeek,attr)}.</p>
+    <div class="t" style="margin-top:10px">Customize retention for local backups</div>
+    <p>Keep local backups on the appliance for ${selHTML('retentionMonths',c.retentionMonths,attr)}.</p>
+    <p class="ind">Keep all intra-daily backups for ${selHTML('intraDays',c.intraDays,attr)}.</p>
+    <p class="ind">After that, keep daily backups for the next ${selHTML('dailyWeeks',c.dailyWeeks,attr)}.</p>
+    <p class="ind">After that, keep weekly backups for the next ${selHTML('weeklyMonths',c.weeklyMonths,attr)}.</p>
+    <p class="ind"><label><input type="checkbox" ${attr}="monthlyKeep" ${c.monthlyKeep?'checked':''}> After that, monthly backups are kept until local backups are deleted.</label></p>
+    ${tp.overflow?'<div class="warnbox">▲ Tier lengths exceed total local retention; later tiers are truncated at the retention limit.</div>':''}
+    ${timelineHTML(c)}
+  </div>`;
+}
+const TL_COL = {intra:'#2a78d6', daily:'#1baf7a', weekly:'#6250d6', monthly:'#eb6834', gap:'#9b9a94'};
+function timelineHTML(c){
+  const tp=tierPoints(c), sp=tp.spans, tot=Object.values(sp).reduce((a,b)=>a+b,0)||1;
+  const seg=(k,lbl,pts)=> sp[k]>0?`<div style="flex:${sp[k]/tot};background:${TL_COL[k]}" title="${lbl}: ${fmtDays(Math.round(sp[k]))}${pts!=null?' · '+Math.round(pts)+' points':''}">${sp[k]/tot>0.12?lbl:''}</div>`:'';
+  return `<div style="margin-top:10px"><div class="timeline">${seg('intra','Intra-daily',tp.intra)}${seg('daily','Daily',tp.daily)}${seg('weekly','Weekly',tp.weekly)}${seg('monthly','Monthly',tp.monthly)}${seg('gap','Not retained',null)}</div>
+  <div class="tl-legend" style="margin-top:4px">
+    <span><i class="sw-dot" style="background:${TL_COL.intra}"></i>Intra-daily ${Math.round(tp.intra)}</span>
+    <span><i class="sw-dot" style="background:${TL_COL.daily}"></i>Daily ${Math.round(tp.daily)}</span>
+    <span><i class="sw-dot" style="background:${TL_COL.weekly}"></i>Weekly ${Math.round(tp.weekly)}</span>
+    <span><i class="sw-dot" style="background:${TL_COL.monthly}"></i>Monthly ${Math.round(tp.monthly)}</span>
+    <span class="muted">= ${Math.round(tp.total)} recovery points · span ${c.retentionMonths} mo</span></div></div>`;
+}
+function readRetention(root, attr='data-rk'){
+  const o={}; root.querySelectorAll(`[${attr}]`).forEach(el=>{ const k=el.getAttribute(attr); o[k] = el.type==='checkbox'? el.checked : +el.value; }); return o;
+}
+
+function openCustomize(ids){
+  const devs = S.devices.filter(d=>ids.includes(d.id)); if(!devs.length) return;
+  const first = devs[0], c = effCfg(first);
+  const many = devs.length>1;
+  const modal = $('#modal');
+  const draw = (cfg)=>{
+    const tmp = Object.assign({}, cfg);
+    const sf = storageFactor(Object.assign({}, effCfg(first), tmp));
+    modal.innerHTML = `<div class="mh"><h2>${many?`Customize retention · ${devs.length} devices`:`Customize retention · ${esc(first.name)}`}</h2><button class="btn ghost" data-act="closeModal">✕</button></div>
+      <p class="hint">Policy: <b>${esc((pol(first.policyId)||{}).name)}</b>. Custom settings override the policy for ${many?'these devices':'this device'} only.</p>
+      <div id="custEd">${retentionEditor(cfg,'data-ck')}</div>
+      <p class="small sec" style="margin-top:10px">${many?'First device':esc(first.name)} at these settings: <b>${fmtGB(dataAt(first,0)*sf,1)}</b> now (vs ${fmtGB(deviceStorage(first,0,Object.assign({},pol(first.policyId), {changeRate:effCfg(first).changeRate})),1)} on policy).</p>
+      <div class="row" style="margin-top:12px">
+        <button class="btn ghost" data-act="custRevert">Revert to policy settings</button><span class="spacer"></span>
+        <button class="btn primary" data-act="custApply">${many?'Apply to selected':'Apply'}</button>
+        <button class="btn" data-act="custApplyAll">Apply to all devices on this policy</button>
+      </div>`;
+    modal.querySelectorAll('[data-ck]').forEach(el=>el.addEventListener('change',()=>draw(readRetention(modal,'data-ck'))));
+  };
+  const init={}; RET_KEYS.forEach(k=>init[k]=c[k]);
+  draw(init);
+  UI.custIds = ids;
+  $('#modalBg').classList.add('open');
+}
+
+/* =========================================================
+   RENDER: POLICIES
+   ========================================================= */
+function renderPolicies(){
+  const g=S.global;
+  const fc=forecast(); const s=summarize(fc);
+  $('#view-policies').innerHTML = `
+  <div class="card">
+    <div class="row" style="align-items:center">
+      <h2 style="flex:1">Policy packages</h2>
+      <button class="btn primary" data-act="newPolicy">+ New policy package</button>
+    </div>
+    <p class="hint">Develop packages as <b>drafts</b> for stakeholder discussion, then publish. Preview what any package would consume if applied to the whole fleet. The global default is assigned to new and imported devices.</p>
+  </div>
+  <div class="policies">${S.policies.map((p,i)=>{
+    const devs = S.devices.filter(d=>d.policyId===p.id);
+    const now = fc[0].byPol[p.id]||0, end = fc[fc.length-1].byPol[p.id]||0;
+    const whatIf = forecast({polMod:(c,d)=>{ const o = d&&d.override?d.override:{}; const n = Object.assign({}, c, p); RET_KEYS.forEach(k=>{ if(o[k]!=null) n[k]=o[k]; }); if(d && d.changeRate!=null && d.changeRate!=='') n.changeRate=+d.changeRate; return n; }});
+    const wiEnd = whatIf[whatIf.length-1].total;
+    const maxR = maxRetentionFor(p);
+    const editing = UI.editPolicy===p.id;
+    return `<div class="pcard ${editing?'active':''}" data-pid="${p.id}">
+      <div class="hd"><i class="sw-dot" style="background:${colorVar(p)};width:14px;height:14px"></i>
+        ${editing?`<input type="text" data-pf="name" value="${esc(p.name)}" style="flex:1;font-weight:700">`:`<span class="name" style="flex:1">${esc(p.name)}</span>`}
+        ${p.status==='draft'?'<span class="pill draft">✎ Draft</span>':'<span class="pill good">✓ Published</span>'}
+        ${S.defaultPolicyId===p.id?'<span class="pill neutral">★ Global default</span>':''}
+      </div>
+      ${editing?`<textarea data-pf="description" placeholder="Purpose / scope / stakeholder notes" style="min-height:50px;font-family:inherit;font-size:13px">${esc(p.description)}</textarea>`:(p.description?`<div class="small sec">${esc(p.description)}</div>`:'')}
+      <div class="stats">
+        <div><b>${devs.length}</b><span>devices</span></div>
+        <div><b>${fmtGB(now,1)}</b><span>storage now</span></div>
+        <div><b>${fmtGB(end,1)}</b><span>at ${g.horizon} mo</span></div>
+      </div>
+      ${editing? retentionEditor(p,'data-pr') + `
+        <div class="row" style="margin-top:4px">
+          <label class="f">Backup window start<select data-pf="windowStart">${HOURS.map(h=>`<option ${p.windowStart===h?'selected':''}>${h}</option>`).join('')}</select></label>
+          ${g.offsiteMode==='policy'?`<label class="f">Offsite / cloud retention<select data-pf="offsiteRetention">${OFFSITE_OPTS.map(o=>`<option ${offsiteFor(p)===o?'selected':''}>${o}</option>`).join('')}</select></label>`:`<span class="small muted" style="padding-bottom:8px">Offsite: ${esc(g.offsiteRetention)} (global policy)</span>`}
+        </div>
+        <div class="row">
+          <label class="f">Local verification<select data-pf="localVerify">${['Daily','Weekly','Monthly','None'].map(v=>`<option ${p.localVerify===v?'selected':''}>${v}</option>`).join('')}</select></label>
+          <label class="f inline" style="padding-bottom:6px"><input type="checkbox" data-pf="screenshotVerify" ${p.screenshotVerify?'checked':''}> Screenshot / boot verification</label>
+        </div>
+        <label class="f">Technician notes<textarea data-pf="notes" style="min-height:50px;font-family:inherit;font-size:13px">${esc(p.notes)}</textarea></label>`
+       : `${timelineHTML(p)}
+        <div class="small sec">${optLabel('intervalHours',p.intervalHours)} · ${p.windowHours} h/day from ${esc(p.windowStart)} · ${p.daysPerWeek} d/wk · ${p.retentionMonths} mo local · offsite ${esc(offsiteFor(p))}${g.offsiteMode==='global'?' (global)':''}${g.fips?' · FIPS':''}</div>`}
+      <div class="small" style="border-top:1px solid var(--border);padding-top:8px">
+        <div>If applied to <b>all devices</b>: <b>${fmtGB(wiEnd,1)}</b> at ${g.horizon} mo · ${pct(wiEnd/s.cap)} of present ${g.capacityTB} TB ${wiEnd>s.cap?'<span class="pill crit">✕ Over</span>':wiEnd>s.tgt?'<span class="pill warn">▲ Above target</span>':'<span class="pill good">✓ Fits</span>'}</div>
+        <div class="muted">Max local retention for this package (others unchanged, ≤${g.targetUtil}%): <b>${maxR===null?'does not fit':maxR===Infinity?'50+ years':maxR+' months'}</b></div>
+      </div>
+      <div class="row">
+        <button class="btn sm ${editing?'primary':''}" data-act="editPolicy" data-pid="${p.id}">${editing?'Done':'Edit'}</button>
+        <button class="btn sm" data-act="clonePolicy" data-pid="${p.id}">Clone</button>
+        <button class="btn sm" data-act="toggleStatus" data-pid="${p.id}">${p.status==='draft'?'Publish':'Move to draft'}</button>
+        ${S.defaultPolicyId!==p.id?`<button class="btn sm" data-act="setDefault" data-pid="${p.id}">Set global default</button>`:''}
+        <button class="btn sm" data-act="applyAll" data-pid="${p.id}" title="Assign this package to every device">Apply to all devices</button>
+        ${S.policies.length>1?`<button class="btn sm ghost danger" data-act="delPolicy" data-pid="${p.id}">Delete</button>`:''}
+      </div>
+    </div>`}).join('')}</div>`;
+}
+
+/* =========================================================
+   RENDER: REPORTS
+   ========================================================= */
+function renderReports(){
+  $('#view-reports').innerHTML = `
+  <div class="grid2">
+    <div class="card">
+      <h2>Executive report</h2>
+      <p class="hint">Forecast, capacity requirement, assumptions, policy summary and risks. Self-contained HTML that prints cleanly to PDF.</p>
+      <div class="row"><button class="btn primary" data-act="execPreview">Preview &amp; export</button></div>
+    </div>
+    <div class="card">
+      <h2>Technician workbook</h2>
+      <p class="hint">Excel workbook to hand to the deploying technician: Read Me, Policy Breakdown (console settings + confirmation), Groupings (by policy, by site, matrix), Inventory (yellow fill-in cells with dropdowns), Device Config (resolved per-device settings), Overrides, and Sign-off checklist.</p>
+      <div class="row">
+        <button class="btn primary" data-act="workbook">⬇ Technician workbook (.xlsx)</button>
+        <button class="btn" data-act="runbook">Copy runbook (Markdown)</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Save / load plan</h2>
+      <p class="hint">The plan autosaves in this browser only. Export the full plan to share with a colleague or keep with the client record.</p>
+      <div class="row">
+        <button class="btn" data-act="exportPlan">Export plan (.json)</button>
+        <label class="btn">Import plan…<input type="file" accept=".json,application/json" id="planFile" hidden></label>
+        <button class="btn" data-act="newClient">Start new client plan</button>
+        <button class="btn ghost danger" data-act="resetAll">Load sample data</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Model assumptions</h2>
+      <ul class="small sec" style="margin:0;padding-left:18px">
+        <li>Each retained recovery point stores the unique blocks changed over its span: <span class="mono">1 − (1 − monthly change)<sup>days ÷ 30.4</sup></span> of protected data.</li>
+        <li>Storage = data × (1 base image + Σ points × unique change) ÷ compression/dedupe ratio × FIPS markup.</li>
+        <li>Tiers: intra-daily (interval span) → daily (1 d) → weekly (7 d) → monthly (30.4 d), truncated at total local retention.</li>
+        <li>Growth applies to protected data each month (% compounding or fixed GB). Fleet additions are added linearly.</li>
+        <li>Planning estimate only — validate against appliance-reported usage after the first 30 days.</li>
+      </ul>
+    </div>
+  </div>`;
+}
+
+/* ---------- Report builders ---------- */
+/* ---------- Technician workbook (.xlsx via ExcelJS) ---------- */
+const EXCELJS_URL='https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+function loadExcelJS(){
+  if(window.ExcelJS) return Promise.resolve(window.ExcelJS);
+  return new Promise((res,rej)=>{ const sc=document.createElement('script'); sc.src=EXCELJS_URL; sc.onload=()=>res(window.ExcelJS); sc.onerror=()=>rej(new Error('ExcelJS failed to load')); document.head.appendChild(sc); });
+}
+function overrideDiff(d){
+  const p=pol(d.policyId)||{}; if(!d.override) return [];
+  const lab={intervalHours:'Backup interval',windowHours:'Window hours/day',daysPerWeek:'Days per week',retentionMonths:'Local retention (months)',intraDays:'Keep intra-daily (days)',dailyWeeks:'Then daily (weeks)',weeklyMonths:'Then weekly (months)',monthlyKeep:'Keep monthly until deleted'};
+  const fmt=(k,v)=>k==='intervalHours'?optLabel(k,v):k==='monthlyKeep'?(v?'Yes':'No'):v;
+  return Object.keys(d.override).filter(k=>d.override[k]!==p[k]).map(k=>({field:lab[k]||k,policy:fmt(k,p[k]),device:fmt(k,d.override[k])}));
+}
+async function buildWorkbook(){
+  const ExcelJS = await loadExcelJS();
+  const g=S.global, stamp=new Date().toISOString().slice(0,10);
+  const wb=new ExcelJS.Workbook(); wb.creator=S.preparedBy||'Wyrd — BCDR Planner'; wb.created=new Date();
+  const NAVY='FF1F3A5F', FILL='FFFFF4CC', GROUP='FFDCE9F7', GREY='FFF2F2F2', DRAFT='FFEEEBFC';
+  const hdr=(row)=>{ row.eachCell(c=>{ c.font={bold:true,color:{argb:'FFFFFFFF'}}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:NAVY}}; c.alignment={vertical:'middle',wrapText:true}; c.border={bottom:{style:'thin'}}; }); row.height=32; };
+  const fillIn=(cell)=>{ cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:FILL}}; cell.border={top:{style:'hair',color:{argb:'FFBBBBBB'}},bottom:{style:'hair',color:{argb:'FFBBBBBB'}},left:{style:'hair',color:{argb:'FFBBBBBB'}},right:{style:'hair',color:{argb:'FFBBBBBB'}}}; };
+  const list=(cell,vals)=>{ cell.dataValidation={type:'list',allowBlank:true,formulae:['"'+vals.join(',')+'"']}; };
+  const dateV=(cell)=>{ cell.dataValidation={type:'date',operator:'greaterThan',allowBlank:true,formulae:[new Date(2000,0,1)]}; cell.numFmt='yyyy-mm-dd'; };
+  const YN=['Yes','No','N/A'], STATUS=['Not started','In progress','Complete','Blocked'];
+  const enc=g.fips?'FIPS 140 validated':'Standard';
+  const fc=forecast(), sm=summarize(fc);
+
+  /* 1. Read Me */
+  const rm=wb.addWorksheet('Read Me',{properties:{tabColor:{argb:NAVY}}});
+  rm.columns=[{width:30},{width:70}];
+  rm.addRow(['BCDR Technician Workbook'+(S.dataset==='sample'?' — SAMPLE DATA':'')]).font={bold:true,size:16};
+  rm.addRow([S.client||'Client','Generated '+stamp+(S.preparedBy?' · Prepared by '+S.preparedBy:'')]).font={color:{argb:'FF555555'}};
+  rm.addRow([]);
+  [['Appliance usable capacity',g.capacityTB+' TB (target max '+g.targetUtil+'%)'],
+   ['Required capacity (forecast)',sm.reqTB+' TB usable through '+monthLabel(g.horizon)],
+   ['Encryption (global)',enc+(g.fips?' — enable on every agent / volume':'')],
+   ['Offsite retention',g.offsiteMode==='global'?g.offsiteRetention+' (global policy, all devices)':'Per device group — see Policy Breakdown'],
+   ['Devices in scope',S.devices.length],['Policy groups',S.policies.length+' ('+S.policies.filter(p=>p.status==='draft').length+' draft)'],
+   ['Global default policy',(pol(S.defaultPolicyId)||{}).name||'—']
+  ].forEach(r=>{ const row=rm.addRow(r); row.getCell(1).font={bold:true}; });
+  rm.addRow([]);
+  rm.addRow(['How to use this workbook']).font={bold:true,size:13};
+  ['1. Policy Breakdown — create each policy group in the backup console exactly as listed. Skip any group marked DRAFT until approved.',
+   '2. Groupings — confirm which devices belong in each group and site.',
+   '3. Inventory — complete every yellow cell for each device as you deploy agents.',
+   '4. Device Config — apply the resolved settings per device; rows flagged in Overrides differ from their policy.',
+   '5. Sign-off — complete the checklist and return the workbook to the project lead.'].forEach(t=>rm.addRow(['',t]));
+  rm.addRow([]);
+  const lg=rm.addRow(['Yellow cells','Technician to complete (dropdowns where shown)']); fillIn(lg.getCell(1)); lg.getCell(1).font={bold:true};
+  const dg=rm.addRow(['Purple rows','Draft policy — do not deploy without approval']); dg.getCell(1).fill={type:'pattern',pattern:'solid',fgColor:{argb:DRAFT}}; dg.getCell(1).font={bold:true};
+  rm.addRow([]); rm.addRow(['Generated with',WYRD.name+' v'+WYRD.version]).getCell(1).font={bold:true};
+  rm.getColumn(2).alignment={wrapText:true,vertical:'top'};
+
+  /* 2. Policy Breakdown */
+  const pb=wb.addWorksheet('Policy Breakdown',{properties:{tabColor:{argb:'FF2A78D6'}}});
+  pb.columns=[{width:34},{width:46},{width:4},{width:30},{width:26}];
+  S.policies.forEach(p=>{
+    const devs=S.devices.filter(d=>d.policyId===p.id), tp=tierPoints(Object.assign({changeRate:g.changeRateMo},p));
+    const h=pb.addRow([p.name+(p.status==='draft'?'  —  DRAFT':'')+(S.defaultPolicyId===p.id?'  ★ default':''),'','','Console confirmation','']);
+    hdr(h); pb.mergeCells(h.number,1,h.number,2); pb.mergeCells(h.number,4,h.number,5);
+    const rows=[['Description',p.description||'—'],['Backup interval','Every '+optLabel('intervalHours',p.intervalHours)],
+      ['Backup window',p.windowStart+' start, '+p.windowHours+' h/day'],['Days per week',p.daysPerWeek],
+      ['Keep local backups for',p.retentionMonths+' months'],['Keep all intra-daily backups for',p.intraDays+' days'],
+      ['Then keep daily backups for',p.dailyWeeks+' weeks'],['Then keep weekly backups for',p.weeklyMonths+' months'],
+      ['Then monthly backups',p.monthlyKeep?'Kept until local backups are deleted':'Not kept'],
+      ['Estimated recovery points',Math.round(tp.total)],['Offsite / cloud retention',offsiteFor(p)+(g.offsiteMode==='global'?' (global)':'')],
+      ['Local verification',p.localVerify],['Screenshot / boot verification',p.screenshotVerify?'Enabled':'Disabled'],['Encryption',enc],
+      ['Devices assigned',devs.length],['Est. storage now / at '+g.horizon+' mo',fmtGB(fc[0].byPol[p.id]||0,1)+' / '+fmtGB(fc[fc.length-1].byPol[p.id]||0,1)],
+      ['Technician notes',p.notes||'']];
+    const confirm=[['Created in console',YN],['Console policy name / ID',null],['Settings verified match',YN],['Created by',null],['Date',  'date']];
+    rows.forEach((r,i)=>{ const row=pb.addRow([r[0],r[1]]); row.getCell(1).font={bold:true}; row.getCell(2).alignment={wrapText:true};
+      if(p.status==='draft'){ row.getCell(1).fill=row.getCell(2).fill={type:'pattern',pattern:'solid',fgColor:{argb:DRAFT}}; }
+      if(confirm[i]){ row.getCell(4).value=confirm[i][0]; row.getCell(4).font={bold:true}; const c=row.getCell(5); fillIn(c); if(Array.isArray(confirm[i][1])) list(c,confirm[i][1]); if(confirm[i][1]==='date') dateV(c); } });
+    pb.addRow([]);
+  });
+
+  /* 3. Groupings */
+  const gr=wb.addWorksheet('Groupings',{properties:{tabColor:{argb:'FF1BAF7A'}}});
+  gr.columns=[{width:28},{width:20},{width:18},{width:14},{width:16},{width:18}];
+  const section=(title)=>{ const r=gr.addRow([title]); r.font={bold:true,size:13}; };
+  const groupBlock=(label,devs,extra)=>{
+    const tot=devs.reduce((a,d)=>a+d.usedGB,0);
+    const r=gr.addRow([label,devs.length+' device(s)','',fmtGB(tot,1),'','']); r.eachCell(c=>{c.fill={type:'pattern',pattern:'solid',fgColor:{argb:GROUP}}; c.font={bold:true};});
+    const h=gr.addRow(['Device','Type','Site','Used (GB)',extra,'Custom retention']); h.font={bold:true,color:{argb:'FF555555'}};
+    devs.forEach(d=>gr.addRow([d.name,d.type,d.site,d.usedGB,extra==='Policy group'?(pol(d.policyId)||{}).name:d.site,d.override?'Yes':'No']));
+    gr.addRow([]);
+  };
+  section('By policy group');
+  S.policies.forEach(p=>groupBlock(p.name+(p.status==='draft'?' (DRAFT)':''),S.devices.filter(d=>d.policyId===p.id),'Site'));
+  section('By site');
+  const sites=[...new Set(S.devices.map(d=>d.site||'(no site)'))].sort();
+  sites.forEach(st=>groupBlock(st,S.devices.filter(d=>(d.site||'(no site)')===st),'Policy group'));
+  section('Site × policy matrix');
+  const mh=gr.addRow(['Site',...S.policies.map(p=>p.name),'Total']); hdr(mh);
+  sites.forEach(st=>{ const ds=S.devices.filter(d=>(d.site||'(no site)')===st); gr.addRow([st,...S.policies.map(p=>ds.filter(d=>d.policyId===p.id).length),ds.length]); });
+
+  /* 4. Inventory */
+  const inv=wb.addWorksheet('Inventory',{properties:{tabColor:{argb:'FFEDA100'}},views:[{state:'frozen',xSplit:2,ySplit:1}]});
+  const invCols=[['#',5],['Device',22],['Type',16],['Site',12],['Policy group',22],['Policy status',12],['Custom retention',10],['Used data (GB)',11],['Est. storage now (GB)',12],['Est. at '+g.horizon+' mo (GB)',12],
+    ['Hostname / FQDN',24,'f'],['IP address',15,'f'],['OS / version',20,'f'],['Serial / asset tag',16,'f'],['Agent installed',11,YN],['Agent version',12,'f'],['Volumes protected',18,'f'],
+    ['Encryption enabled',12,YN],['Policy applied in console',13,['Yes','No']],['First backup completed',14,'date'],['Screenshot verification passing',14,YN],['Technician',14,'f'],['Date completed',13,'date'],['Status',13,STATUS],['Notes',36,'f']];
+  inv.columns=invCols.map(c=>({header:c[0],width:c[1]}));
+  hdr(inv.getRow(1));
+  S.devices.forEach((d,i)=>{
+    const p=pol(d.policyId)||{};
+    const row=inv.addRow([i+1,d.name,d.type,d.site,p.name,p.status==='draft'?'DRAFT':'Published',d.override?'Yes':'No',d.usedGB,+deviceStorage(d,0).toFixed(1),+deviceStorage(d,g.horizon).toFixed(1)]);
+    invCols.forEach((c,ci)=>{ if(!c[2]) return; const cell=row.getCell(ci+1); fillIn(cell); if(Array.isArray(c[2])) list(cell,c[2]); if(c[2]==='date') dateV(cell); });
+    if(p.status==='draft') row.getCell(6).fill={type:'pattern',pattern:'solid',fgColor:{argb:DRAFT}};
+    row.getCell(24).value='Not started';
+  });
+  inv.autoFilter={from:{row:1,column:1},to:{row:1,column:invCols.length}};
+
+  /* 5. Device Config */
+  const dc=wb.addWorksheet('Device Config',{properties:{tabColor:{argb:'FF6250D6'}},views:[{state:'frozen',xSplit:1,ySplit:1}]});
+  const dcCols=[['Device',22],['Policy group',22],['Backup interval',12],['Window start',9],['Window h/day',9],['Days/week',8],['Local retention (mo)',10],['Intra-daily (days)',10],['Daily (weeks)',9],['Weekly (months)',9],['Monthly kept',9],['Offsite retention',14],['Local verification',11],['Screenshot verification',11],['Encryption',16],['Differs from policy',30],['Configured',11,['Yes','No']],['Verified by',14,'f']];
+  dc.columns=dcCols.map(c=>({header:c[0],width:c[1]}));
+  hdr(dc.getRow(1));
+  S.devices.forEach(d=>{
+    const c=effCfg(d), p=pol(d.policyId)||{}, diff=overrideDiff(d);
+    const row=dc.addRow([d.name,p.name,optLabel('intervalHours',c.intervalHours),p.windowStart,c.windowHours,c.daysPerWeek,c.retentionMonths,c.intraDays,c.dailyWeeks,c.weeklyMonths,c.monthlyKeep?'Yes':'No',offsiteFor(p),p.localVerify,p.screenshotVerify?'Enabled':'Disabled',enc,diff.map(x=>x.field).join('; ')]);
+    if(diff.length) row.getCell(16).font={bold:true,color:{argb:'FFB42318'}};
+    dcCols.forEach((col,ci)=>{ if(!col[2]) return; const cell=row.getCell(ci+1); fillIn(cell); if(Array.isArray(col[2])) list(cell,col[2]); });
+  });
+  dc.autoFilter={from:{row:1,column:1},to:{row:1,column:dcCols.length}};
+
+  /* 6. Overrides */
+  const ov=wb.addWorksheet('Overrides',{properties:{tabColor:{argb:'FFE34948'}}});
+  ov.columns=[{header:'Device',width:22},{header:'Policy group',width:22},{header:'Setting',width:28},{header:'Policy value',width:18},{header:'Device value (apply this)',width:24},{header:'Applied',width:10}];
+  hdr(ov.getRow(1));
+  const ovRows=S.devices.flatMap(d=>overrideDiff(d).map(x=>[d.name,(pol(d.policyId)||{}).name,x.field,x.policy,x.device]));
+  if(!ovRows.length) ov.addRow(['No per-device overrides — every device uses its policy group as-is.']);
+  ovRows.forEach(r=>{ const row=ov.addRow(r); row.getCell(5).font={bold:true}; fillIn(row.getCell(6)); list(row.getCell(6),['Yes','No']); });
+
+  /* 7. Sign-off */
+  const so=wb.addWorksheet('Sign-off',{properties:{tabColor:{argb:'FF008300'}}});
+  so.columns=[{header:'Checklist item',width:62},{header:'Done',width:9},{header:'Initials',width:10},{header:'Date',width:13},{header:'Notes',width:40}];
+  hdr(so.getRow(1));
+  ['All in-scope devices have the backup agent installed (Inventory complete)',
+   `Encryption set per global standard: ${enc}`,
+   'Every published policy group created in console and verified against Policy Breakdown',
+   'Draft policies NOT deployed (or approved in writing before deployment)',
+   'Each device assigned to the correct policy group (Groupings)',
+   'Per-device overrides applied (Overrides sheet)',
+   `Offsite / cloud retention configured: ${g.offsiteMode==='global'?g.offsiteRetention+' (global)':'per group'}`,
+   'First full backup completed for every device',
+   'Screenshot / boot verification passing where enabled',
+   'Appliance utilization recorded after first backups (enter actual TB in Notes)',
+   'Alerting / ticket routing for backup failures confirmed'
+  ].forEach(t=>{ const r=so.addRow([t]); r.getCell(1).alignment={wrapText:true}; [2,3,4,5].forEach(ci=>fillIn(r.getCell(ci))); list(r.getCell(2),['Yes','No','N/A']); dateV(r.getCell(4)); });
+  so.addRow([]);
+  [['Technician name / signature'],['Reviewer name / signature'],['Date']].forEach(t=>{ const r=so.addRow([t[0]]); r.getCell(1).font={bold:true}; so.mergeCells(r.number,2,r.number,5); fillIn(r.getCell(2)); });
+
+  const buf=await wb.xlsx.writeBuffer();
+  return {name:`wyrd-technician-workbook-${slug()}-${stamp}.xlsx`, blob:new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})};
+}
+
+function buildRunbook(){
+  const g=S.global, stamp=new Date().toISOString().slice(0,10);
+  // markdown
+  let md = `# BCDR Backup Configuration Runbook${S.dataset==='sample'?' (SAMPLE DATA)':''}\n\n**Client:** ${S.client||'—'}  \n**Prepared by:** ${S.preparedBy||'—'}  \n**Generated:** ${stamp}  \n**Encryption:** ${g.fips?'FIPS 140 validated (enable on all agents/volumes)':'Standard'}\n\n`;
+  S.policies.forEach(p=>{
+    const ds = S.devices.filter(d=>d.policyId===p.id);
+    md += `## Policy: ${p.name}${p.status==='draft'?' (DRAFT – do not deploy)':''}${S.defaultPolicyId===p.id?' ★ default':''}\n\n${p.description?p.description+'\n\n':''}`+
+      `| Setting | Value |\n|---|---|\n| Backup interval | ${optLabel('intervalHours',p.intervalHours)} |\n| Window | ${p.windowStart}, ${p.windowHours} h/day, ${p.daysPerWeek} days/week |\n| Local retention | ${p.retentionMonths} months |\n| Keep all intra-daily | ${p.intraDays} days |\n| Then daily | ${p.dailyWeeks} weeks |\n| Then weekly | ${p.weeklyMonths} months |\n| Then monthly | ${p.monthlyKeep?'Until local backups deleted':'Not kept'} |\n| Offsite retention | ${offsiteFor(p)}${g.offsiteMode==='global'?' (global policy)':''} |\n| Verification | Local ${p.localVerify}; screenshot ${p.screenshotVerify?'on':'off'} |\n\n`+
+      (p.notes?`> ${p.notes}\n\n`:'')+
+      `**Devices (${ds.length}):** ${ds.map(d=>d.name+(d.override?' *(custom retention – see below)*':'')).join(', ')||'none'}\n\n`;
+  });
+  const cust = S.devices.filter(d=>d.override);
+  if(cust.length){ md += `## Per-device overrides\n\n| Device | Interval | Retention | Intra-daily | Daily | Weekly | Monthly |\n|---|---|---|---|---|---|---|\n`;
+    cust.forEach(d=>{const c=effCfg(d); md+=`| ${d.name} | ${optLabel('intervalHours',c.intervalHours)} | ${c.retentionMonths} mo | ${c.intraDays} d | ${c.dailyWeeks} wk | ${c.weeklyMonths} mo | ${c.monthlyKeep?'kept':'—'} |\n`;}); }
+  return {name:`wyrd-runbook-${slug()}-${stamp}.md`, text:md};
+}
+function slug(){ return (S.client||'plan').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'plan'; }
+
+function buildExecReport(){
+  const g=S.global, fc=forecast(), s=summarize(fc), shift=maxRetentionShift(), wmR=wmSeries(fc);
+  const stamp=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  const steps=[]; for(let t=0;t<=g.horizon;t+=g.checkpointStep) steps.push(t); if(steps[steps.length-1]!==g.horizon) steps.push(g.horizon);
+  const st = s.status==='good'?['#1f7a3f','✓ Fits within target']:s.status==='warn'?['#8a5a00','▲ Exceeds target utilization']:['#b42318','✕ Exceeds present capacity'];
+  const protectedNow=S.devices.reduce((a,d)=>a+d.usedGB,0);
+  const byType={}; S.devices.forEach(d=>{byType[d.type]=(byType[d.type]||0)+1;});
+  const risks=[];
+  if(s.hitFull) risks.push(`Present ${g.capacityTB} TB appliance reaches 100% in ${monthLabel(s.hitFull.t)}; backups would fail or prune early.`);
+  else if(s.hitTarget) risks.push(`Utilization passes the ${g.targetUtil}% target in ${monthLabel(s.hitTarget.t)}.`);
+  const drafts=S.policies.filter(p=>p.status==='draft'&&S.devices.some(d=>d.policyId===p.id));
+  if(drafts.length) risks.push(`Devices are assigned to draft policies (${drafts.map(p=>p.name).join(', ')}): approve before deployment.`);
+  const cust=S.devices.filter(d=>d.override).length; if(cust) risks.push(`${cust} device(s) use custom retention outside their policy.`);
+  if(g.fips) risks.push(`FIPS encryption adds ${g.fipsMarkup}% to storage consumption (included in figures).`);
+  const shiftTxt = shift.impossible?'Present appliance cannot hold minimum retention; upgrade required.': shift.unlimited?'Substantial headroom: retention could be extended significantly.': shift.delta>=0?`All local retention can be extended by +${shift.delta} month(s) while staying within target.`:`Local retention must be reduced by ${-shift.delta} month(s) across policies to stay within target, or upgrade.`;
+  const th='style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;background:#f3f3f1;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#555"';
+  const td='style="padding:6px 8px;border-bottom:1px solid #e5e5e5"';
+  const tdn='style="padding:6px 8px;border-bottom:1px solid #e5e5e5;text-align:right"';
+  const legend = S.policies.slice(0,8).map((p,i)=>`<span style="display:inline-flex;align-items:center;gap:5px;margin-right:12px"><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${colorHex(i)}"></i>${esc(p.name)}</span>`).join('');
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>BCDR Executive Report – ${esc(S.client||'Client')}</title>
+<style>body{font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;color:#111;max-width:900px;margin:24px auto;padding:0 24px;font-size:13px;line-height:1.5}h1{font-size:22px;margin:0}h2{font-size:15px;margin:22px 0 8px;border-bottom:2px solid #111;padding-bottom:4px}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}.k{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.k div{border:1px solid #ddd;border-radius:8px;padding:8px 10px}.k b{display:block;font-size:17px}.k span{font-size:11px;color:#666;text-transform:uppercase}@media print{body{margin:0}h2{break-after:avoid}table{break-inside:avoid}}</style></head><body>
+<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px"><div><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#666">Business continuity &amp; disaster recovery</div><h1>Backup Storage Forecast &amp; Policy Plan</h1>${S.dataset==='sample'?'<div style="display:inline-block;margin-top:4px;font-size:11px;font-weight:700;letter-spacing:.06em;color:#fff;background:#eb6834;padding:2px 8px;border-radius:4px">SAMPLE DATA</div>':''}<div style="color:#444">${esc(S.client||'Client')} · ${stamp}${S.preparedBy?' · Prepared by '+esc(S.preparedBy):''}</div></div>
+<div style="font-weight:700;color:${st[0]};border:1.5px solid ${st[0]};border-radius:20px;padding:4px 12px;white-space:nowrap">${st[1]}</div></div>
+<h2>Summary</h2>
+<div class="k"><div><span>Devices protected</span><b>${S.devices.length}</b></div><div><span>Protected data now</span><b>${fmtGB(protectedNow)}</b></div><div><span>Storage now</span><b>${fmtGB(s.now.total)}</b>${pct(s.utilNow)} of ${g.capacityTB} TB</div><div><span>Storage at ${g.horizon} mo</span><b>${fmtGB(s.end.total)}</b>${pct(s.utilEnd)} of ${g.capacityTB} TB</div></div>
+<p><b>Capacity requirement:</b> <b>${s.reqTB} TB usable</b> keeps utilization at or below ${g.targetUtil}% through ${monthLabel(g.horizon)} (peak ${fmtGB(s.peak)}). Present appliance: ${g.capacityTB} TB usable — ${s.reqTB<=g.capacityTB?'sufficient for this plan.':'<b>undersized</b> by '+(s.reqTB-g.capacityTB).toFixed(1)+' TB.'}</p>
+<p><b>Retention headroom:</b> ${shiftTxt}</p>${wmR?`<p><b>Change vs watermark</b> (${esc(wmLabel())}): ${(fc[0].total-wmR[0].total>=0?'+':'−')+fmtGB(Math.abs(fc[0].total-wmR[0].total),1)} now, ${(s.end.total-wmR[wmR.length-1].total>=0?'+':'−')+fmtGB(Math.abs(s.end.total-wmR[wmR.length-1].total),1)} at ${g.horizon} months.</p>`:''}
+<h2>Forecast · ${monthLabel(0)} – ${monthLabel(g.horizon)}</h2>
+<div style="font-size:12px;color:#444;margin-bottom:4px">${legend}<span>— — Capacity &nbsp; ···· Target ${g.targetUtil}%${wmR?' &nbsp; <span style="color:#e34948">—·— Watermark</span>':''}</span></div>
+${chartSVG(fc,{css:false,wm:wmR})}
+<table style="margin-top:10px"><thead><tr><th ${th}>Month</th><th ${th}>Protected data</th><th ${th}>Backup storage</th><th ${th}>Utilization</th></tr></thead><tbody>
+${steps.map(t=>{const m=fc[t];return `<tr><td ${td}>${monthLabel(t)}</td><td ${tdn}>${fmtGB(m.data)}</td><td ${tdn}><b>${fmtGB(m.total)}</b></td><td ${tdn}>${pct(m.total/s.cap)}</td></tr>`}).join('')}</tbody></table>
+<h2>Policy packages</h2>
+<table><thead><tr><th ${th}>Policy</th><th ${th}>Status</th><th ${th}>Devices</th><th ${th}>Schedule</th><th ${th}>Local retention</th><th ${th}>Offsite</th><th ${th}>Storage now</th><th ${th}>At ${g.horizon} mo</th></tr></thead><tbody>
+${S.policies.map(p=>`<tr><td ${td}><b>${esc(p.name)}</b>${S.defaultPolicyId===p.id?' ★':''}</td><td ${td}>${p.status==='draft'?'Draft':'Published'}</td><td ${tdn}>${S.devices.filter(d=>d.policyId===p.id).length}</td><td ${td}>Every ${optLabel('intervalHours',p.intervalHours)}, ${p.windowHours}h × ${p.daysPerWeek}d</td><td ${td}>${p.retentionMonths} mo (${p.intraDays}d intra · ${p.dailyWeeks}w daily · ${p.weeklyMonths}m weekly${p.monthlyKeep?' · monthly':''})</td><td ${td}>${esc(offsiteFor(p))}</td><td ${tdn}>${fmtGB(fc[0].byPol[p.id]||0)}</td><td ${tdn}>${fmtGB(fc[fc.length-1].byPol[p.id]||0)}</td></tr>`).join('')}</tbody></table>
+<h2>Fleet</h2>
+<p>${Object.entries(byType).map(([k,v])=>`${v} × ${esc(k)}`).join(' · ')||'No devices'}${g.fleetAddsPerYear?` · plus ${g.fleetAddsPerYear} new devices/year (${g.fleetAddSizeGB} GB avg) planned`:''}</p>
+<h2>Key assumptions</h2>
+<table><tbody>
+<tr><td ${td}>Encryption</td><td ${td}>${g.fips?`FIPS 140 enabled (+${g.fipsMarkup}% storage)`:'Standard'}</td></tr>
+<tr><td ${td}>Data change rate</td><td ${td}>${g.changeRateMo}% of data per month (default; device overrides applied)</td></tr>
+<tr><td ${td}>Offsite retention</td><td ${td}>${g.offsiteMode==='global'?esc(g.offsiteRetention)+' (global policy)':'Per device group (see policy table)'}</td></tr>
+<tr><td ${td}>Compression / dedupe</td><td ${td}>${g.reduction}:1</td></tr>
+<tr><td ${td}>Data growth</td><td ${td}>${g.growthScope==='device'?'Per device (default ':''}${g.growthType==='pct'?g.growthPct+'% per month (compounding)':g.growthGB+' GB per device per month'}${g.growthScope==='device'?')':''}</td></tr>
+<tr><td ${td}>Appliance</td><td ${td}>${g.capacityTB} TB usable, ${g.targetUtil}% target utilization</td></tr>
+<tr><td ${td}>Method</td><td ${td}>Each recovery point stores unique changed blocks over its span; planning estimate — validate against appliance usage after 30 days.</td></tr>
+</tbody></table>
+${risks.length?`<h2>Risks &amp; decisions needed</h2><ul>${risks.map(r=>`<li>${esc(r)}</li>`).join('')}</ul>`:''}
+<p style="margin-top:28px;font-size:11px;color:#777">Generated with ${esc(WYRD.name)} v${WYRD.version} · ${esc(NOTICE)}</p>
+</body></html>`;
+}
+
+/* ---------- Export plumbing (downloads capability → blob → copy) ---------- */
+let downloadsNS = null;
+(async()=>{ try{ if(window.claude && claude.use){ downloadsNS = await claude.use('downloads'); } }catch(e){ downloadsNS=null; } })();
+async function saveFile(name, text, mime){
+  try{ if(downloadsNS){ await downloadsNS.save({filename:name, data:text}); toast('Saved '+name); return true; } }catch(e){ toast(e && e.code==='declined' ? 'Download cancelled' : 'Download unavailable here'); return false; }
+  try{ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type:mime||'text/plain'})); a.download=name; document.body.appendChild(a); a.click(); a.remove(); toast('Downloading '+name+' (if blocked, use Copy)'); return true; }catch(e){ toast('Download blocked — use Copy'); return false; }
+}
+async function copyText(text){ try{ await navigator.clipboard.writeText(text); toast('Copied to clipboard'); }catch(e){ const ta=document.getElementById('exportText'); if(ta){ ta.select(); toast('Press Ctrl/Cmd+C to copy'); } } }
+
+function openExport(title, file, mime, previewHTML){
+  UI.exportFile = {file, mime};
+  $('#modal').innerHTML = `<div class="mh"><h2>${esc(title)}</h2><button class="btn" data-act="doCopy">Copy</button><button class="btn primary" data-act="doSave">Download ${esc(file.name.split('.').pop().toUpperCase())}</button><button class="btn ghost" data-act="closeModal">✕</button></div>
+    <p class="hint">File: <span class="mono">${esc(file.name)}</span>${mime==='text/html'?' · Open the downloaded file in a browser and Print → Save as PDF for a PDF copy.':''}</p>
+    ${previewHTML?`<div class="report-frame"><iframe id="repFrame" style="width:100%;height:60vh;border:0;background:#fff" sandbox title="Report preview"></iframe></div>`:''}
+    <textarea id="exportText" ${previewHTML?'style="display:none"':'style="min-height:55vh"'} readonly>${esc(file.text)}</textarea>`;
+  $('#modalBg').classList.add('open');
+  if(previewHTML){ $('#repFrame').srcdoc = file.text; }
+}
+
+function openImport(){
+  $('#modal').innerHTML = `<div class="mh"><h2>Import devices (CSV)</h2><button class="btn ghost" data-act="closeModal">✕</button></div>
+   <p class="hint">Paste or load a CSV (e.g. an RMM export). Recognized headers (case-insensitive): <span class="mono">name/device/hostname, type, site/location/client, used/usedGB/size/data (GB; “TB” suffix ok), policy, change/changeRate (% per month), growth</span>. Unknown policies use the global default.</p>
+   <div class="row" style="margin-bottom:8px"><label class="btn">Choose file…<input type="file" accept=".csv,text/csv,.txt" id="csvFile" hidden></label>
+   <button class="btn sm ghost" data-act="csvTemplate">Insert template</button>
+   <label class="f inline"><input type="checkbox" id="csvReplace"> Replace existing devices</label></div>
+   <textarea id="csvText" placeholder="name,type,site,usedGB,policy,changeRate,growth"></textarea>
+   <div id="csvPreview" class="small sec" style="margin-top:6px"></div>
+   <div class="row" style="margin-top:10px"><span class="spacer"></span><button class="btn primary" data-act="csvDo">Import</button></div>`;
+  $('#modalBg').classList.add('open');
+  $('#csvFile').addEventListener('change', e=>{ const f=e.target.files[0]; if(!f) return; f.text().then(t=>{ $('#csvText').value=t; previewCSV(); }); });
+  $('#csvText').addEventListener('input', previewCSV);
+}
+function parseCSV(text){
+  const rows=[]; let row=[], cur='', q=false;
+  for(let i=0;i<text.length;i++){ const ch=text[i];
+    if(q){ if(ch==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=ch; }
+    else if(ch==='"') q=true; else if(ch===','){row.push(cur);cur='';} else if(ch==='\n'||ch==='\r'){ if(ch==='\r'&&text[i+1]==='\n') i++; row.push(cur); rows.push(row); row=[]; cur=''; } else cur+=ch; }
+  if(cur!==''||row.length){row.push(cur);rows.push(row);}
+  return rows.filter(r=>r.some(c=>c.trim()!==''));
+}
+function csvToDevices(text){
+  const rows=parseCSV(text); if(rows.length<2) return [];
+  const h=rows[0].map(x=>x.trim().toLowerCase().replace(/[^a-z]/g,''));
+  const find=(...keys)=>h.findIndex(x=>keys.some(k=>x===k||x.startsWith(k)));
+  const iN=find('name','device','hostname','computer','agent'), iT=find('type','devicetype','formfactor','os'), iS=find('site','location','client','customer'),
+        iU=find('usedgb','used','usedspace','size','data','protected'), iP=find('policy','package'), iC=find('changerate','change'), iG=find('growth');
+  return rows.slice(1).map(r=>{
+    const get=i=>i>=0?(r[i]||'').trim():'';
+    let u=get(iU); let gb=parseFloat(u.replace(/[^0-9.]/g,''))||0; if(/tb/i.test(u)) gb*=1024; if(/mb/i.test(u)) gb/=1024;
+    const pn=get(iP).toLowerCase(); const p=S.policies.find(x=>x.name.toLowerCase()===pn) || pol(S.defaultPolicyId) || S.policies[0];
+    let t=get(iT); const tl=t.toLowerCase(); t = DEVICE_TYPES.find(x=>x.toLowerCase()===tl) || (/server/.test(tl)?'Server':/vm|virtual/.test(tl)?'Virtual machine':/nas|share|file/.test(tl)?'NAS / file share':/host|hyper|esx/.test(tl)?'Hypervisor host':/work|desk|lap|pc|win/.test(tl)?'Workstation':'Server');
+    const c=get(iC), g=get(iG);
+    return dev(get(iN)||'Device', t, get(iS), Math.round(gb*10)/10, p.id, {changeRate:c===''?null:parseFloat(c), growthValue:g===''?null:parseFloat(g)});
+  }).filter(d=>d.name);
+}
+function previewCSV(){ const d=csvToDevices($('#csvText').value); $('#csvPreview').textContent = d.length? `${d.length} device(s) detected · ${fmtGB(d.reduce((a,x)=>a+x.usedGB,0))} total` : 'No rows detected yet.'; }
+
+/* =========================================================
+   CHECKPOINTS — named saves of the whole config; one can be ★ preferred.
+   Stored privately per user in the artifact db; falls back to this browser.
+   ========================================================= */
+const CP_LOCAL='wyrd-checkpoints-v1';
+const CP = {list:[], preferredId:null, backend:'local', db:null, uid:null, ready:false};
+const freshStart = (()=>{ try{ return !localStorage.getItem(STORE_KEY) && !localStorage.getItem(LEGACY_KEY); }catch(e){ return true; } })();
+function cpLocalRead(){ try{ return JSON.parse(localStorage.getItem(CP_LOCAL)||localStorage.getItem('bcdr-checkpoints-v1')||'{"list":[],"preferredId":null}'); }catch(e){ return {list:[],preferredId:null}; } }
+function cpLocalWrite(){ try{ localStorage.setItem(CP_LOCAL, JSON.stringify({list:CP.list, preferredId:CP.preferredId})); }catch(e){} }
+async function cpInit(){
+  try{
+    if(window.claude && claude.use){
+      const [db,user] = await Promise.all([claude.use('db'), claude.use('user')]);
+      const uid = user ? await user.id() : null;
+      if(db && uid){
+        CP.db=db; CP.uid=uid; CP.backend='account';
+        const snap = await db.collection('data/users/'+uid).get();
+        CP.list = snap.docs.filter(d=>d.id.startsWith('cp-')).map(d=>Object.assign({id:d.id.slice(3)}, d.data()));
+        const pref = snap.docs.find(d=>d.id==='prefs'); CP.preferredId = pref ? (pref.data().preferredId||null) : null;
+      }
+    }
+  }catch(e){ CP.backend='local'; CP.db=null; }
+  if(CP.backend==='local'){ const l=cpLocalRead(); CP.list=l.list; CP.preferredId=l.preferredId; }
+  CP.list.sort((a,b)=>b.savedAt-a.savedAt);
+  CP.ready=true; renderHeaderCP();
+  if(freshStart && CP.preferredId && CP.list.some(c=>c.id===CP.preferredId)){ cpLoad(CP.preferredId, true); }
+}
+async function cpSave(name, makePreferred){
+  const id=uid(), state=JSON.parse(JSON.stringify(S));
+  const rec={id, name:name||('Checkpoint '+new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})), savedAt:Date.now(), client:S.client||'', devices:S.devices.length, policies:S.policies.length, state};
+  if(JSON.stringify(rec).length > 240000){ toast('Plan too large for one checkpoint — use Export plan'); return; }
+  try{
+    if(CP.backend==='account'){ const {id:_, ...body}=rec; await CP.db.collection('data/users/'+CP.uid).doc('cp-'+id).set(body); }
+    CP.list.unshift(rec);
+    if(makePreferred) await cpSetPreferred(id); else if(CP.backend==='local') cpLocalWrite();
+    toast('Checkpoint saved'+(makePreferred?' as preferred':'')); renderHeaderCP(); if($('#cpModal')) openCheckpoints();
+  }catch(e){ toast(e && e.code==='quota_exceeded' ? 'Checkpoint storage full — delete old checkpoints' : 'Could not save checkpoint'); }
+}
+async function cpSetPreferred(id){
+  CP.preferredId = (CP.preferredId===id) ? null : id;
+  try{ if(CP.backend==='account') await CP.db.collection('data/users/'+CP.uid).doc('prefs').set({preferredId:CP.preferredId}); else cpLocalWrite(); }catch(e){ toast('Could not update preferred'); }
+  renderHeaderCP();
+}
+async function cpDelete(id){
+  try{ if(CP.backend==='account') await CP.db.collection('data/users/'+CP.uid).doc('cp-'+id).delete(); }catch(e){ toast('Could not delete'); return; }
+  CP.list=CP.list.filter(c=>c.id!==id);
+  if(CP.preferredId===id) await cpSetPreferred(id); else if(CP.backend==='local') cpLocalWrite();
+  renderHeaderCP();
+}
+function cpLoad(id, auto){
+  const c=CP.list.find(x=>x.id===id); if(!c) return;
+  S=JSON.parse(JSON.stringify(c.state)); migrate(); UI.selected.clear(); UI.editPolicy=null; renderAll();
+  toast((auto?'Loaded your preferred checkpoint: ':'Loaded: ')+c.name);
+}
+function renderHeaderCP(){
+  const b=$('#btnPreferred'); if(!b) return;
+  const p=CP.list.find(c=>c.id===CP.preferredId);
+  b.hidden=!p; if(p) b.title='Load preferred checkpoint: '+p.name;
+}
+function openCheckpoints(){
+  const when=t=>new Date(t).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
+  $('#modal').innerHTML=`<div class="mh" id="cpModal"><h2>Checkpoints</h2><button class="btn ghost" data-act="closeModal">✕</button></div>
+    <p class="hint">A checkpoint saves the whole configuration — devices, policy packages, global settings and watermark. Mark one ★ preferred to return to it in one click from any session. ${CP.backend==='account'?'Saved privately to your account.':'Saved in this browser only (account storage unavailable in this view).'}</p>
+    <div class="row" style="margin-bottom:12px">
+      <label class="f" style="flex:1">Name<input type="text" id="cpName" placeholder="e.g. ${esc(S.client||'Client')} – approved v1" style="width:100%"></label>
+      <label class="f inline" style="padding-bottom:6px"><input type="checkbox" id="cpPref"> Set as preferred</label>
+      <button class="btn primary" data-act="cpSave">💾 Save current</button>
+    </div>
+    ${CP.list.length?`<div class="tablewrap"><table><thead><tr><th style="width:36px">★</th><th>Name</th><th>Client</th><th class="num">Devices</th><th class="num">Policies</th><th>Saved</th><th></th></tr></thead><tbody>
+    ${CP.list.map(c=>`<tr><td><button class="btn sm ghost" data-act="cpPref" data-id="${c.id}" title="${CP.preferredId===c.id?'Unset preferred':'Set as preferred'}" style="color:${CP.preferredId===c.id?'var(--warn)':'var(--text-muted)'};font-size:16px">${CP.preferredId===c.id?'★':'☆'}</button></td>
+      <td><b>${esc(c.name)}</b>${CP.preferredId===c.id?' <span class="pill warn">Preferred</span>':''}</td><td>${esc(c.client||'—')}</td><td class="num">${c.devices}</td><td class="num">${c.policies}</td><td class="small">${when(c.savedAt)}</td>
+      <td style="white-space:nowrap"><button class="btn sm primary" data-act="cpLoad" data-id="${c.id}">Load</button> <button class="btn sm ghost danger" data-act="cpDel" data-id="${c.id}">Delete</button></td></tr>`).join('')}
+    </tbody></table></div>`:'<div class="empty">No checkpoints yet. Save the current configuration above.</div>'}
+    <p class="small muted" style="margin-top:10px">Loading replaces the current working configuration. Save a checkpoint first if you want to keep it.</p>`;
+  $('#modalBg').classList.add('open');
+}
+
+/* ---------- sample vs client plan ---------- */
+function renderDsBar(){
+  const el=$('#dsBar'); if(!el) return;
+  if(S.dataset==='sample'){
+    el.innerHTML=`<div class="dsbar sample"><span class="tag">SAMPLE DATA</span><span>These devices and figures are illustrative. Look around, then start a real plan for a client.</span><span class="sp"></span><button class="btn primary" data-act="newClient">Start new client plan</button></div>`;
+  } else {
+    const missing=[]; if(!S.client) missing.push('client name'); if(!S.devices.length) missing.push('devices');
+    el.innerHTML=`<div class="dsbar"><span class="tag">CLIENT PLAN</span><span><b>${esc(S.client||'Unnamed client')}</b>${missing.length?` · still needed: ${missing.join(', ')}`:` · ${S.devices.length} device${S.devices.length===1?'':'s'}`}</span><span class="sp"></span>${!S.devices.length?'<button class="btn sm" data-act="importCSV">⇪ Import devices</button>':''}</div>`;
+  }
+}
+function newClientPlan(){
+  const keepName = S.dataset==='sample' ? (S.client||'') : '';
+  const fresh = sampleState();
+  fresh.dataset='client'; fresh.devices=[]; fresh.client=keepName; fresh.preparedBy=S.preparedBy||'';
+  S=fresh; UI.selected.clear(); UI.editPolicy=null; setTab('devices');
+  toast('New client plan — starter policy packages kept, add devices to begin');
+}
+function openAbout(){
+  $('#modal').innerHTML=`<div class="mh"><h2>About &amp; license</h2><button class="btn ghost" data-act="closeModal">✕</button></div>
+  <div class="about">
+    <p><b>${esc(WYRD.name)}</b> · version ${WYRD.version} · released ${WYRD.released}</p>
+    <p>Plans BCDR backup schedules, retention and appliance capacity so every stakeholder can see what a policy choice costs in storage, and hands technicians a workbook to deploy it. Named for Wyrd, the well of fate the Norns tend: what has been laid down shapes what will be.</p>
+    <p>${authorLinks()}</p>
+    <p><a href="${WYRD.repo}" target="_blank" rel="noopener">Source &amp; downloads on GitHub</a> · <a href="${WYRD.repo}/blob/main/LICENSE.md" target="_blank" rel="noopener">Full license</a></p>
+    <div class="row" style="align-items:center"><button class="btn" data-act="checkUpd">Check for updates</button><span class="small muted">${!WYRD.manifestUrl?"Update checks aren't set up in this copy.":LOCAL?'This copy checks for a newer version each time it opens.':'The hosted version is always current.'}</span></div>
+    <p class="notice">${esc(NOTICE)}</p>
+    <p class="notice">Forecasts are planning estimates. Validate against appliance-reported usage after the first 30 days.</p>
+  </div>`;
+  $('#modalBg').classList.add('open');
+}
+const authorLinks = () => `Built by <b>${esc(WYRD.author)}</b> · <a href="${WYRD.linkedin}" target="_blank" rel="noopener">LinkedIn</a> · <a href="${WYRD.portfolio}" target="_blank" rel="noopener">Portfolio Toolbox</a>`;
+function renderFoot(){
+  $('#appFoot').innerHTML=`<div class="row"><span><b>Wyrd</b> v${WYRD.version}</span><span>${authorLinks()}</span><span class="sp"></span><a href="#" data-act="about">About &amp; license</a></div><span>${esc(NOTICE)}</span>`;
+}
+function semverCmp(a,b){ const p=x=>String(x||'0').replace(/^v/,'').split(/[.-]/).map(v=>parseInt(v,10)||0); const A=p(a),B=p(b); for(let i=0;i<3;i++){ if((A[i]||0)!==(B[i]||0)) return (A[i]||0)>(B[i]||0)?1:-1; } return 0; }
+async function checkUpdates(manual){
+  if(!WYRD.manifestUrl){ if(manual) toast("Update checks aren't set up in this copy"); return; }
+  if(!LOCAL){ if(manual) toast("This is the hosted version, so it's always current"); return; }
+  try{
+    let u=WYRD.manifestUrl, j=null;
+    for(let hop=0;hop<3;hop++){ const r=await fetch(u,{cache:'no-store'}); if(!r.ok) throw new Error('HTTP '+r.status); j=await r.json(); if(j.moved_to && j.moved_to!==u){ u=j.moved_to; continue; } break; }
+    const newer=semverCmp(j.latest,WYRD.version)>0;
+    let dismissed=''; try{ dismissed=localStorage.getItem(STORE_KEY+'-upd-dismiss')||''; }catch(_){}
+    const bar=$('#updBar');
+    if(newer && (manual || dismissed!==j.latest)){
+      bar.innerHTML=`<span>🆕 <b>Wyrd ${esc(j.latest)}</b> is available. You have ${esc(WYRD.version)}.${j.notes?' '+esc(j.notes):''}</span><span class="sp"></span>${j.download?`<a class="btnlink" href="${esc(j.download)}" target="_blank" rel="noopener">Get the update</a>`:''}<button type="button" class="btn" id="updLater">Later</button>`;
+      bar.hidden=false;
+      $('#updLater').addEventListener('click',()=>{ try{ localStorage.setItem(STORE_KEY+'-upd-dismiss',j.latest); }catch(_){} bar.hidden=true; });
+    } else if(manual) toast(newer?'Update available':`You're on the latest version (${WYRD.version})`);
+  }catch(e){ if(manual) toast("Couldn't check for updates: "+e.message); }
+}
+
+/* =========================================================
+   EVENTS
+   ========================================================= */
+function renderAll(){
+  save();
+  $('#clientName').value = S.client||''; $('#preparedBy').value = S.preparedBy||'';
+  renderDsBar();
+  renderKPIs();
+  if(UI.tab==='overview') renderOverview();
+  if(UI.tab==='devices') renderDevices();
+  if(UI.tab==='policies') renderPolicies();
+  if(UI.tab==='reports') renderReports();
+}
+function setTab(t){
+  UI.tab=t; document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected', b.dataset.tab===t));
+  ['overview','devices','policies','reports'].forEach(v=>{ const el=$('#view-'+v); el.hidden = v!==t; if(v!==t) el.innerHTML=''; });
+  try{ history.replaceState(null,'','#'+t); }catch(e){}
+  renderAll();
+}
+$('#tabs').addEventListener('click', e=>{ const b=e.target.closest('button[data-tab]'); if(b) setTab(b.dataset.tab); });
+$('#clientName').addEventListener('change', e=>{ S.client=e.target.value; save(); });
+$('#preparedBy').addEventListener('change', e=>{ S.preparedBy=e.target.value; save(); });
+$('#btnTheme').addEventListener('click', ()=>{ const r=document.documentElement; const cur = r.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'); r.dataset.theme = cur==='dark'?'light':'dark'; try{localStorage.setItem('wyrd-theme',r.dataset.theme);}catch(e){} renderAll(); });
+try{ const th=localStorage.getItem('wyrd-theme'); if(th) document.documentElement.dataset.theme=th; }catch(e){}
+
+// global settings + models (overview)
+document.addEventListener('change', e=>{
+  const el=e.target;
+  if(el.dataset.g){ const k=el.dataset.g; let v = el.type==='checkbox'?el.checked : (el.type==='number'? parseFloat(el.value) : el.value);
+    if(el.type==='number' && !isFinite(v)) return;
+    if(k==='horizon') v=Math.max(1,Math.min(120,Math.round(v)));
+    if(k==='checkpointStep') v=+v;
+    S.global[k]=v; if(k==='wmMode' && v==='none') S.global.chartView='forecast'; renderAll(); return; }
+  // device row edits
+  const tr = el.closest('tr[data-id]');
+  if(tr && el.dataset.f){ const d=S.devices.find(x=>x.id===tr.dataset.id); const f=el.dataset.f;
+    if(['usedGB'].includes(f)) d[f]=parseFloat(el.value)||0;
+    else if(['changeRate','growthValue'].includes(f)) d[f]= el.value===''?null:parseFloat(el.value);
+    else d[f]=el.value;
+    renderAll(); return; }
+  if(tr && el.hasAttribute('data-selrow')){ el.checked?UI.selected.add(tr.dataset.id):UI.selected.delete(tr.dataset.id); renderAll(); return; }
+  if(el.id==='selAll'){ const vis=[...document.querySelectorAll('tr[data-id]')].map(r=>r.dataset.id); if(el.checked) vis.forEach(id=>UI.selected.add(id)); else vis.forEach(id=>UI.selected.delete(id)); renderAll(); return; }
+  // policy edits
+  const pc = el.closest('.pcard');
+  if(pc){ const p=pol(pc.dataset.pid);
+    if(el.dataset.pf){ const f=el.dataset.pf; p[f] = el.type==='checkbox'?el.checked : el.value; renderAll(); return; }
+    if(el.dataset.pr){ Object.assign(p, readRetention(pc,'data-pr')); renderAll(); return; } }
+  if(el.id==='planFile'){ const f=el.files[0]; if(!f) return; f.text().then(t=>{ try{ const o=JSON.parse(t); if(!o.policies||!o.devices) throw 0; S=o; UI.selected.clear(); renderAll(); toast('Plan imported'); }catch(err){ toast('Not a valid plan file'); } }); }
+});
+document.addEventListener('input', e=>{ if(e.target.id==='devFilter'){ UI.filter=e.target.value; const pos=e.target.selectionStart; renderDevices(); const f=$('#devFilter'); f.focus(); f.setSelectionRange(pos,pos); } });
+
+document.addEventListener('click', e=>{
+  const th = e.target.closest('th[data-sort]');
+  if(th){ const k=th.dataset.sort; UI.sortDir = UI.sort===k ? -(UI.sortDir||1) : 1; UI.sort=k; renderDevices(); return; }
+  if(e.target===$('#modalBg')){ closeModal(); return; }
+  const b = e.target.closest('[data-act]'); if(!b) return;
+  if(b.tagName==='A') e.preventDefault();
+  const a = b.dataset.act, sel=[...UI.selected].filter(id=>S.devices.some(d=>d.id===id));
+  const sDev = fn => { S.devices.filter(d=>sel.includes(d.id)).forEach(fn); renderAll(); };
+  switch(a){
+    case 'horizon': S.global.horizon=+b.dataset.h; renderAll(); break;
+    case 'cpOpen': openCheckpoints(); break;
+    case 'cpQuick': openCheckpoints(); setTimeout(()=>{ const i=$('#cpName'); if(i) i.focus(); },0); break;
+    case 'cpSave': cpSave($('#cpName').value.trim(), $('#cpPref').checked); break;
+    case 'cpPref': cpSetPreferred(b.dataset.id).then(openCheckpoints); break;
+    case 'cpLoad': cpLoad(b.dataset.id); closeModal(); break;
+    case 'cpDel': if(b.dataset.confirm){ cpDelete(b.dataset.id).then(openCheckpoints); } else { b.dataset.confirm='1'; b.textContent='Confirm'; } break;
+    case 'cpPreferred': if(CP.preferredId) cpLoad(CP.preferredId); break;
+    case 'offmode': S.global.offsiteMode=b.dataset.v; renderAll(); break;
+    case 'openCal': { const i=$('#startMonth'); try{ i.showPicker(); }catch(err){ i.focus(); } break; }
+    case 'cview': S.global.chartView=b.dataset.v; renderAll(); break;
+    case 'wmSnap': takeSnapshot(); S.global.chartView='delta'; renderAll(); toast('Watermark set — edits now show as change from this point'); break;
+    case 'wmClear': S.watermark=null; if(S.global.wmMode==='snapshot') S.global.wmMode='none'; if(!wmSeries(forecast())) S.global.chartView='forecast'; renderAll(); break;
+    case 'gscope': S.global.growthScope=b.dataset.v; renderAll(); break;
+    case 'gtype': S.global.growthType=b.dataset.v; renderAll(); break;
+    case 'addDevice': { const d=dev('NEW-'+(S.devices.length+1),'Server','',100,S.defaultPolicyId||S.policies[0].id); S.devices.unshift(d); UI.filter=''; renderAll(); setTimeout(()=>{ const i=document.querySelector(`tr[data-id="${d.id}"] input[data-f=name]`); if(i){i.focus();i.select();} },0); break; }
+    case 'importCSV': openImport(); break;
+    case 'csvTemplate': $('#csvText').value = 'name,type,site,usedGB,policy,changeRate,growth\nSRV-DC02,Server,HQ,150,Standard Server,,\nSRV-SQL02,Server,HQ,0.6 TB,Standard Server,30,\nWS-ENG01,Workstation,Branch,220,Workstation Lite,,'; previewCSV(); break;
+    case 'csvDo': { const ds=csvToDevices($('#csvText').value); if(!ds.length){toast('No rows to import');break;} if($('#csvReplace').checked){ S.devices=[]; UI.selected.clear(); } S.devices.push(...ds); closeModal(); renderAll(); toast(ds.length+' device(s) imported'); break; }
+    case 'clearDevices': if(b.dataset.confirm){ S.devices=[]; UI.selected.clear(); renderAll(); } else { b.dataset.confirm='1'; b.textContent='Click again to confirm'; setTimeout(()=>{ if(b.isConnected){ delete b.dataset.confirm; b.textContent='Clear all'; } },3000); } break;
+    case 'loadSample': S=sampleState(); UI.selected.clear(); renderAll(); break;
+    case 'bkApplyPolicy': { const v=$('#bkPolicy').value; if(v) sDev(d=>d.policyId=v); break; }
+    case 'bkApplyType': { const v=$('#bkType').value; if(v) sDev(d=>d.type=v); break; }
+    case 'bkApplySite': { const v=$('#bkSite').value; sDev(d=>d.site=v); break; }
+    case 'bkApplyChange': { const v=$('#bkChange').value; sDev(d=>d.changeRate= v===''?null:parseFloat(v)); break; }
+    case 'bkApplyGrowth': { const v=$('#bkGrowth').value; sDev(d=>d.growthValue= v===''?null:parseFloat(v)); break; }
+    case 'bkCustomize': openCustomize(sel); break;
+    case 'bkClearOverride': sDev(d=>d.override=null); break;
+    case 'bkDelete': S.devices=S.devices.filter(d=>!sel.includes(d.id)); UI.selected.clear(); renderAll(); break;
+    case 'bkNone': UI.selected.clear(); renderAll(); break;
+    case 'customize': openCustomize([b.dataset.id]); break;
+    case 'custApply': case 'custApplyAll': {
+      const r=readRetention($('#modal'),'data-ck'); const ids=UI.custIds;
+      let targets = S.devices.filter(d=>ids.includes(d.id));
+      if(a==='custApplyAll'){ const pids=new Set(targets.map(d=>d.policyId)); targets=S.devices.filter(d=>pids.has(d.policyId)); }
+      targets.forEach(d=>{ const p=pol(d.policyId); const diff={}; RET_KEYS.forEach(k=>{ if(r[k]!==p[k]) diff[k]=r[k]; }); d.override = Object.keys(diff).length?diff:null; });
+      closeModal(); renderAll(); toast(`Retention applied to ${targets.length} device(s)`); break; }
+    case 'custRevert': S.devices.filter(d=>UI.custIds.includes(d.id)).forEach(d=>d.override=null); closeModal(); renderAll(); toast('Reverted to policy settings'); break;
+    case 'closeModal': closeModal(); break;
+    case 'newPolicy': { const p=defaultPolicy({name:'New policy package', colorIdx:S.policies.length}); S.policies.push(p); UI.editPolicy=p.id; renderAll(); break; }
+    case 'editPolicy': UI.editPolicy = UI.editPolicy===b.dataset.pid?null:b.dataset.pid; renderAll(); break;
+    case 'clonePolicy': { const src=pol(b.dataset.pid); const p=Object.assign({}, JSON.parse(JSON.stringify(src)), {id:uid(), name:src.name+' (copy)', status:'draft'}); S.policies.splice(S.policies.indexOf(src)+1,0,p); UI.editPolicy=p.id; renderAll(); break; }
+    case 'toggleStatus': { const p=pol(b.dataset.pid); p.status = p.status==='draft'?'published':'draft'; renderAll(); break; }
+    case 'setDefault': S.defaultPolicyId=b.dataset.pid; renderAll(); break;
+    case 'applyAll': if(b.dataset.confirm){ S.devices.forEach(d=>{ d.policyId=b.dataset.pid; }); renderAll(); toast('Assigned to all devices'); } else { b.dataset.confirm='1'; b.textContent='Confirm: assign to all?'; setTimeout(()=>{ if(b.isConnected){delete b.dataset.confirm; b.textContent='Apply to all devices';} },3000);} break;
+    case 'delPolicy': { if(!b.dataset.confirm){ b.dataset.confirm='1'; b.textContent='Confirm delete'; setTimeout(()=>{ if(b.isConnected){delete b.dataset.confirm;b.textContent='Delete';} },3000); break; }
+      const id=b.dataset.pid; S.policies=S.policies.filter(p=>p.id!==id); const fb=(pol(S.defaultPolicyId)||S.policies[0]).id; if(S.defaultPolicyId===id) S.defaultPolicyId=S.policies[0].id;
+      S.devices.forEach(d=>{ if(d.policyId===id) d.policyId=S.defaultPolicyId; }); if(S.global.fleetAddPolicyId===id) S.global.fleetAddPolicyId=S.defaultPolicyId; renderAll(); break; }
+    case 'execPreview': { const html=buildExecReport(); openExport('Executive report', {name:`wyrd-executive-report-${slug()}-${new Date().toISOString().slice(0,10)}.html`, text:html}, 'text/html', true); break; }
+    case 'workbook': { b.disabled=true; const t=b.textContent; b.textContent='Building…'; buildWorkbook().then(f=>saveFile(f.name,f.blob,'xlsx')).catch(err=>toast('Workbook failed: '+err.message)).finally(()=>{ b.disabled=false; b.textContent=t; }); break; }
+    case 'runbook': openExport('Technician runbook', buildRunbook(), 'text/markdown', false); break;
+    case 'exportPlan': openExport('Plan file', {name:`wyrd-plan-${slug()}-${new Date().toISOString().slice(0,10)}.json`, text:JSON.stringify(S,null,2)}, 'application/json', false); break;
+    case 'newClient': if(S.dataset==='client' && S.devices.length && !b.dataset.confirm){ b.dataset.confirm='1'; b.textContent='Click again — clears devices'; setTimeout(()=>{ if(b.isConnected){delete b.dataset.confirm;b.textContent='Start new client plan';} },3000); break; }
+      newClientPlan(); break;
+    case 'about': openAbout(); break;
+    case 'checkUpd': checkUpdates(true); break;
+    case 'resetAll': if(b.dataset.confirm){ S=sampleState(); UI.selected.clear(); renderAll(); } else { b.dataset.confirm='1'; b.textContent='Click again to replace current plan'; setTimeout(()=>{ if(b.isConnected){delete b.dataset.confirm;b.textContent='Load sample data';} },3000);} break;
+    case 'doCopy': copyText(UI.exportFile.file.text); break;
+    case 'doSave': saveFile(UI.exportFile.file.name, UI.exportFile.file.text, UI.exportFile.mime); break;
+  }
+});
+function closeModal(){ $('#modalBg').classList.remove('open'); $('#modal').innerHTML=''; }
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
+
+const startTab = (location.hash||'').slice(1);
+setTab(['overview','devices','policies','reports'].includes(startTab)?startTab:'overview');
+renderFoot();
+cpInit();
+checkUpdates(false);
+</script>
+</body>
+</html>
