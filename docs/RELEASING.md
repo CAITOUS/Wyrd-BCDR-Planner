@@ -5,11 +5,11 @@ Every copy of Wyrd has a version number (footer → **About & license**). Downlo
 ## One-time setup
 
 1. Publish this repository. The update file must be publicly readable.
-2. In `wyrd.json`, set `download` to your releases page, e.g. `https://github.com/CAITOUS/Wyrd-BDCR-Planner/releases/latest`.
+2. In `wyrd.json`, set `download` to your releases page, e.g. `https://github.com/CAITOUS/Wyrd-BCDR-Planner/releases/latest`.
 3. In `Wyrd.html`, in the `WYRD` settings block in the script, set:
 
    ```js
-   manifestUrl:"https://raw.githubusercontent.com/CAITOUS/Wyrd-BDCR-Planner/main/wyrd.json"
+   manifestUrl:"https://raw.githubusercontent.com/CAITOUS/Wyrd-BCDR-Planner/main/wyrd.json"
    ```
 
    Leave it as `""` to turn update checks off.
@@ -22,7 +22,7 @@ Every copy of Wyrd has a version number (footer → **About & license**). Downlo
 3. Update `wyrd.json`:
 
    ```json
-   { "latest": "1.1.0", "released": "2026-12-01", "download": "https://github.com/CAITOUS/Wyrd-BDCR-Planner/releases/latest", "notes": "One-line summary shown in the banner." }
+   { "latest": "1.1.0", "released": "2026-12-01", "download": "https://github.com/CAITOUS/Wyrd-BCDR-Planner/releases/latest", "notes": "One-line summary shown in the banner." }
    ```
 
 4. Commit and push to `main`.

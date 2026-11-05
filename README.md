@@ -4,7 +4,7 @@
 
 Wyrd is a single HTML file. It needs no installation and no server. Open it in any modern browser, add a client's devices, build backup policy packages, and see what each choice costs in local storage across the next months or years. You can check whether the present appliance holds the plan, how much retention it can afford, and what capacity a replacement needs.
 
-### ▶ [Launch Wyrd in your browser](https://caitous.github.io/Wyrd-BDCR-Planner/) &nbsp;·&nbsp; ⬇ [Download the latest release](https://github.com/CAITOUS/Wyrd-BDCR-Planner/releases/latest)
+### ▶ [Launch Wyrd in your browser](https://caitous.github.io/Wyrd-BCDR-Planner/) &nbsp;·&nbsp; ⬇ [Download the latest release](https://github.com/CAITOUS/Wyrd-BCDR-Planner/releases/latest)
 
 No sign-up and no install. It opens on clearly labeled **sample data** so you can look around right away. Click **Start new client plan** to clear the devices and begin a real one. Your plan is saved in your own browser only.
 
@@ -35,8 +35,8 @@ No sign-up and no install. It opens on clearly labeled **sample data** so you ca
 ## Quick start
 
 1. **Open Wyrd**, either way:
-   - **In your browser:** [caitous.github.io/Wyrd-BDCR-Planner](https://caitous.github.io/Wyrd-BDCR-Planner/). Nothing to download.
-   - **Offline copy:** download `Wyrd.html` (app only) or `wyrd-<version>.zip` (app, guides, license) from [Releases](https://github.com/CAITOUS/Wyrd-BDCR-Planner/releases/latest), then open `Wyrd.html`.
+   - **In your browser:** [caitous.github.io/Wyrd-BCDR-Planner](https://caitous.github.io/Wyrd-BCDR-Planner/). Nothing to download.
+   - **Offline copy:** download `Wyrd.html` (app only) or `wyrd-<version>.zip` (app, guides, license) from [Releases](https://github.com/CAITOUS/Wyrd-BCDR-Planner/releases/latest), then open `Wyrd.html`.
 2. **Click Start new client plan.** This clears the sample devices and keeps the starter policy packages.
 3. **Enter the client name** and the present appliance's usable capacity.
 4. **Add or import devices** on the Devices tab, and assign each to a policy package.
